@@ -1,18 +1,19 @@
 # %%
-from pathlib import Path
-import matplotlib.pyplot as plt
 import random
+from pathlib import Path
 from typing import Any
+
 import datasets
+import matplotlib.pyplot as plt
 import numpy as np
-from pydantic import BaseModel
-import transformer_lens
-from tqdm import tqdm
-import torch
 import pandas as pd
-from sklearn.decomposition import PCA
 import seaborn as sns
+import torch
+import transformer_lens
 from mppr import mppr
+from pydantic import BaseModel
+from sklearn.decomposition import PCA
+from tqdm import tqdm
 
 LAYERS = [f"blocks.{i}.hook_resid_post" for i in range(0, 15)]
 
