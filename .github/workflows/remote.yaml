@@ -3,9 +3,8 @@ on:
   push:
     branches:
       - 'main'
-    # paths:
-    #   - 'Dockerfile'
-    #   - 'poetry.lock'
+    paths:
+      - 'poetry.lock'
 jobs:
   remote:
     runs-on: ubuntu-latest
