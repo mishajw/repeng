@@ -8,6 +8,7 @@ on:
     #   - 'poetry.lock'
 jobs:
   docker:
+    runs-on: ubuntu-latest
     steps:
       - name: Run Custom Docker Action
         uses: mishajw/remote@main
