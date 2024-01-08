@@ -10,9 +10,8 @@ jobs:
   remote:
     runs-on: ubuntu-latest
     steps:
-      - name: Run Custom Docker Action
-        uses: mishajw/remote@main
+      - uses: mishajw/remote@main
         with:
-          name: 'test'
+          dockerhub_repo: 'ccs'
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
