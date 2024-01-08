@@ -31,17 +31,22 @@ class ActivationArrays:
 def get_activations(
     model: HookedTransformer, input_row: InputRow, layers: list[str]
 ) -> ActivationRow:
-    logits: torch.Tensor
-    logits, cache = model.run_with_cache(  # type: ignore
-        input_row.text,
-        names_filter=layers,
-    )
-
     assert model.tokenizer is not None
     tokens = model.tokenizer.encode(input_row.text)
     tokens = torch.tensor([tokens], device=next(model.parameters()).device)
-    logprobs = logits[0, 1:, :].log_softmax(dim=-1)
-    token_logprobs = logprobs.gather(dim=-1, index=tokens).squeeze(0).detach()
+
+    logits: torch.Tensor
+    logits, cache = model.run_with_cache(  # type: ignore
+        tokens,
+        names_filter=layers,
+    )
+
+    logprobs = logits.log_softmax(dim=-1)
+    logprobs_shifted = logprobs[0, :-1]
+    tokens_shifted = tokens[0, 1:, None]
+    token_logprobs = (
+        logprobs_shifted.gather(dim=-1, index=tokens_shifted).squeeze(0).detach()
+    )
 
     return ActivationRow(
         input_row=input_row,

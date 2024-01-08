@@ -1,5 +1,6 @@
 # %%
 from pathlib import Path
+from pprint import pprint
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,92 +9,107 @@ import torch
 import transformer_lens
 from mppr import mppr
 from sklearn.decomposition import PCA
-from tqdm import tqdm
 
 from ccs.activations import ActivationRow, get_activation_arrays, get_activations
-from ccs.data.addition import create_addition_rows_v2
+from ccs.data.addition import create_addition_rows
+from ccs.data.probe import train_probe
 from ccs.data.types import InputRow
 
 # %%
 model = transformer_lens.HookedTransformer.from_pretrained(
-    "EleutherAI/pythia-1b",
+    "pythia-1b",
     device="mps",
 )
-layers = [f"blocks.{i}.hook_resid_post" for i in range(0, 15)]
+layers = [f"blocks.{i}.hook_resid_post" for i in range(len(model.blocks))]
 
 # %%
-# activation_rows_v1 = (
-#     mppr.init(
-#         "initial_v1",
-#         Path("output"),
-#         init_fn=create_addition_rows,
-#         to=InputRow,
-#     )
-#     .map(
-#         "activations_v1",
-#         lambda _, row: get_activations(row),
-#         to="pickle",  # required for numpy arrays.
-#     )
-#     .get()
-# )
-activation_rows_v2 = (
+_, cache = model.run_with_cache("test")
+list(cache.keys())
+
+# %%
+activation_rows_v1 = (
     mppr.init(
-        "initial_v2",
+        "initial_v1",
         Path("output"),
-        init_fn=create_addition_rows_v2,
+        init_fn=create_addition_rows,
         to=InputRow,
     )
-    # .limit(1e9)
+    .limit(500)
     .map(
-        "activations_v2",
+        "activations_v1",
         lambda _, row: get_activations(model=model, input_row=row, layers=layers),
         to="pickle",  # required for numpy arrays.
-    ).get()
+    )
+    .get()
 )
-activation_rows = activation_rows_v2
+# activation_rows_v2 = (
+#     mppr.init(
+#         "initial_v2",
+#         Path("output"),
+#         init_fn=create_addition_rows_v2,
+#         to=InputRow,
+#     )
+#     # .limit(1e9)
+#     .map(
+#         "activations_v2",
+#         lambda _, row: get_activations(model=model, input_row=row, layers=layers),
+#         to="pickle",  # required for numpy arrays.
+#     ).get()
+# )
+activation_rows = activation_rows_v1
 
 # %%
 activation_rows: list[ActivationRow] = mppr.load(
-    "activations_v2",
+    "activations_v1",
     Path("output"),
     to="pickle",
 ).get()
+activation_rows = activation_rows[: len(activation_rows) // 2 * 2]
 len(activation_rows)
 
 # %%
 activation_arrays = get_activation_arrays(
-    activation_rows, layer=layers[9], normalize=False
+    activation_rows, layer=layers[9], normalize=True
 )
-print(
-    (
-        (activation_arrays.logprobs_1 > activation_arrays.logprobs_2)
-        == activation_arrays.is_text_true
-    ).mean()
+lp1 = (activation_arrays.logprobs_1 - activation_arrays.logprobs_1.mean()) / (
+    activation_arrays.logprobs_1.std()
 )
+lp2 = (activation_arrays.logprobs_2 - activation_arrays.logprobs_2.mean()) / (
+    activation_arrays.logprobs_2.std()
+)
+print((lp1 > lp2).mean())
+print(((lp1 > lp2) == activation_arrays.is_text_true).mean())
 
 # %%
-probe = torch.nn.Sequential(
-    torch.nn.Linear(2048, 1),
-    torch.nn.Sigmoid(),
-).to("mps")
-optimizer = torch.optim.Adam(probe.parameters(), lr=1e-3, weight_decay=1e-3)
-activations1_tensor = torch.tensor(activation_arrays.activations_1).to(device="mps")
-activations2_tensor = torch.tensor(activation_arrays.activations_2).to(device="mps")
-pbar = tqdm(range(10000))
-for _ in pbar:
-    p1 = probe(activations1_tensor)
-    p2 = probe(activations2_tensor)
-    loss_consistency = ((p1 - (1 - p2)) ** 2).mean()
-    loss_confidence = (torch.stack([p1, p2], dim=1).min(dim=1).values ** 2).mean()
-    loss = loss_consistency + loss_confidence
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
-    pbar.set_postfix(loss=loss.item())
+for i in range(5):
+    print(repr(activation_arrays.rows_1[i].input_row.text[-30:]))
+    print(activation_arrays.rows_1[i].token_logprobs[-1])
+    print(repr(activation_arrays.rows_2[i].input_row.text[-30:]))
+    print(activation_arrays.rows_2[i].token_logprobs[-1])
+    print()
 
 # %%
-pred_is_text_true = (probe(activations1_tensor) > 0.5).squeeze(1).cpu().numpy()
-(pred_is_text_true == activation_arrays.is_text_true).mean()
+for layer in layers:
+    print("Layer:", layer)
+    activation_arrays = get_activation_arrays(
+        activation_rows, layer=layer, normalize=True
+    )
+    probe = train_probe(activation_arrays)
+    device = next(probe.parameters()).device
+    pred_is_text_true = (
+        probe(torch.tensor(activation_arrays.activations_1, device=device))
+        + (1 - probe(torch.tensor(activation_arrays.activations_2, device=device))) / 2
+    )
+    pred_is_text_true = (pred_is_text_true > 0.5).squeeze(1).cpu().numpy()
+    print((pred_is_text_true == activation_arrays.is_text_true).mean())
+
+# %%
+print(activation_arrays.rows_1[0].input_row)
+print(activation_arrays.rows_2[0].input_row)
+print(activation_arrays.rows_1[1].input_row)
+print(activation_arrays.rows_2[1].input_row)
+print(activation_arrays.rows_1[2].input_row)
+print(activation_arrays.rows_2[2].input_row)
 
 # %%
 pca = PCA(n_components=6)
@@ -130,3 +146,29 @@ mean_contains_false = torch.stack(
     df[~df["does_text_contain_true"]]["activation"].to_list()
 )
 # df[df["does_text_contain_true"]]["activation"]
+
+# %%
+df = pd.DataFrame(
+    [
+        dict(
+            is_text_true=row.input_row.is_text_true,
+            does_text_contain_true=row.input_row.does_text_contain_true,
+            logprobs=row.token_logprobs.sum(),
+        )
+        for row in activation_rows
+    ]
+)
+sns.histplot(data=df, x="logprobs", hue="is_text_true")
+plt.show()
+sns.histplot(data=df, x="logprobs", hue="does_text_contain_true")
+plt.show()
+
+# %%
+pprint(activation_rows[0].input_row.model_dump())
+pprint(activation_rows[0].token_logprobs.sum())
+pprint(activation_rows[1].input_row.model_dump())
+pprint(activation_rows[1].token_logprobs.sum())
+pprint(activation_rows[2].input_row.model_dump())
+pprint(activation_rows[2].token_logprobs.sum())
+pprint(activation_rows[3].input_row.model_dump())
+pprint(activation_rows[3].token_logprobs.sum())
