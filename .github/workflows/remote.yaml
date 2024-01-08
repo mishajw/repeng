@@ -1,0 +1,17 @@
+name: remote
+on:
+  push:
+    branches:
+      - 'main'
+    # paths:
+    #   - 'Dockerfile'
+    #   - 'poetry.lock'
+jobs:
+  docker:
+    steps:
+      - name: Run Custom Docker Action
+        uses: mishajw/remote
+        with:
+          name: 'test'
+          docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
