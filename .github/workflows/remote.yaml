@@ -10,7 +10,7 @@ jobs:
   docker:
     steps:
       - name: Run Custom Docker Action
-        uses: mishajw/remote
+        uses: mishajw/remote@main
         with:
           name: 'test'
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
