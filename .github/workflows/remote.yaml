@@ -7,7 +7,7 @@ on:
     #   - 'Dockerfile'
     #   - 'poetry.lock'
 jobs:
-  docker:
+  remote:
     runs-on: ubuntu-latest
     steps:
       - name: Run Custom Docker Action
