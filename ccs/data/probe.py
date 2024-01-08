@@ -4,15 +4,21 @@ from tqdm import tqdm
 from ccs.activations import ActivationArrays
 
 
-def train_probe(activation_arrays: ActivationArrays) -> torch.nn.Module:
+def train_probe(
+    activation_arrays: ActivationArrays, device: torch.device
+) -> torch.nn.Module:
     hidden_dim = activation_arrays.activations_1.shape[1]
     probe = torch.nn.Sequential(
         torch.nn.Linear(hidden_dim, 1, bias=True),
         torch.nn.Sigmoid(),
-    ).to("mps")
+    ).to(device)
     optimizer = torch.optim.Adam(probe.parameters(), lr=1e-3, weight_decay=1e-3)
-    activations1_tensor = torch.tensor(activation_arrays.activations_1).to(device="mps")
-    activations2_tensor = torch.tensor(activation_arrays.activations_2).to(device="mps")
+    activations1_tensor = torch.tensor(activation_arrays.activations_1).to(
+        device=device
+    )
+    activations2_tensor = torch.tensor(activation_arrays.activations_2).to(
+        device=device
+    )
     pbar = tqdm(range(1000))
     for _ in pbar:
         p1 = probe(activations1_tensor)

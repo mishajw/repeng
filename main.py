@@ -11,27 +11,38 @@ from mppr import mppr
 from sklearn.decomposition import PCA
 
 from ccs.activations import ActivationRow, get_activation_arrays, get_activations
-from ccs.data.addition import create_addition_rows
+from ccs.data.amazon import create_amazon_rows
 from ccs.data.probe import train_probe
 from ccs.data.types import InputRow
 
 # %%
+torch.cuda.empty_cache()
+
+# %%
+# model = "meta-llama/Llama-2-7b-chat-hf"
+# hf_model = LlamaForCausalLM.from_pretrained(model)
+# tokenizer = LlamaTokenizer.from_pretrained(model)
+
+device = torch.device("cuda")
 model = transformer_lens.HookedTransformer.from_pretrained(
-    "pythia-1b",
-    device="mps",
+    # "stabilityai/stablelm-tuned-alpha-7b",
+    "gptj",
+    device=device,
+    dtype=torch.bfloat16,
 )
 layers = [f"blocks.{i}.hook_resid_post" for i in range(len(model.blocks))]
 
 # %%
-_, cache = model.run_with_cache("test")
-list(cache.keys())
+with torch.inference_mode():
+    _, cache = model.run_with_cache("test")
+    list(cache.keys())
 
 # %%
 activation_rows_v1 = (
     mppr.init(
         "initial_v1",
         Path("output"),
-        init_fn=create_addition_rows,
+        init_fn=create_amazon_rows,
         to=InputRow,
     )
     .limit(500)
@@ -49,12 +60,13 @@ activation_rows_v1 = (
 #         init_fn=create_addition_rows_v2,
 #         to=InputRow,
 #     )
-#     # .limit(1e9)
+#     .limit(500)
 #     .map(
 #         "activations_v2",
 #         lambda _, row: get_activations(model=model, input_row=row, layers=layers),
 #         to="pickle",  # required for numpy arrays.
-#     ).get()
+#     )
+#     .get()
 # )
 activation_rows = activation_rows_v1
 
@@ -71,30 +83,27 @@ len(activation_rows)
 activation_arrays = get_activation_arrays(
     activation_rows, layer=layers[9], normalize=True
 )
-lp1 = (activation_arrays.logprobs_1 - activation_arrays.logprobs_1.mean()) / (
-    activation_arrays.logprobs_1.std()
-)
-lp2 = (activation_arrays.logprobs_2 - activation_arrays.logprobs_2.mean()) / (
-    activation_arrays.logprobs_2.std()
-)
+lp1 = activation_arrays.logprobs_1 - activation_arrays.logprobs_1.mean()
+lp2 = activation_arrays.logprobs_2 - activation_arrays.logprobs_2.mean()
 print((lp1 > lp2).mean())
 print(((lp1 > lp2) == activation_arrays.is_text_true).mean())
 
 # %%
 for i in range(5):
-    print(repr(activation_arrays.rows_1[i].input_row.text[-30:]))
+    print(repr(activation_arrays.rows_1[i].input_row.text))
     print(activation_arrays.rows_1[i].token_logprobs[-1])
-    print(repr(activation_arrays.rows_2[i].input_row.text[-30:]))
+    print(repr(activation_arrays.rows_2[i].input_row.text))
     print(activation_arrays.rows_2[i].token_logprobs[-1])
     print()
 
 # %%
 for layer in layers:
+    # for layer in [layers[20]]:
     print("Layer:", layer)
     activation_arrays = get_activation_arrays(
         activation_rows, layer=layer, normalize=True
     )
-    probe = train_probe(activation_arrays)
+    probe = train_probe(activation_arrays, device=device)
     device = next(probe.parameters()).device
     pred_is_text_true = (
         probe(torch.tensor(activation_arrays.activations_1, device=device))
@@ -125,7 +134,6 @@ for i in range(0, 6, 2):
     axes.set_ylabel(f"PCA Component {i + 2}")
     plt.show()
 
-
 # %%
 df = pd.DataFrame(
     [
@@ -145,7 +153,6 @@ mean_contains_true = torch.stack(
 mean_contains_false = torch.stack(
     df[~df["does_text_contain_true"]]["activation"].to_list()
 )
-# df[df["does_text_contain_true"]]["activation"]
 
 # %%
 df = pd.DataFrame(
@@ -153,7 +160,8 @@ df = pd.DataFrame(
         dict(
             is_text_true=row.input_row.is_text_true,
             does_text_contain_true=row.input_row.does_text_contain_true,
-            logprobs=row.token_logprobs.sum(),
+            # logprobs=row.token_logprobs.sum(),
+            logprobs=row.token_logprobs[-1].item(),
         )
         for row in activation_rows
     ]

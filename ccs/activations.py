@@ -28,6 +28,7 @@ class ActivationArrays:
     is_text_true: np.ndarray
 
 
+@torch.inference_mode()
 def get_activations(
     model: HookedTransformer, input_row: InputRow, layers: list[str]
 ) -> ActivationRow:
@@ -51,10 +52,10 @@ def get_activations(
     return ActivationRow(
         input_row=input_row,
         activations={
-            layer: cache[layer].squeeze(0)[-1].detach().cpu().numpy()
+            layer: cache[layer].float().squeeze(0)[-1].detach().cpu().numpy()
             for layer in layers
         },
-        token_logprobs=token_logprobs.cpu().numpy(),
+        token_logprobs=token_logprobs.float().cpu().numpy(),
     )
 
 
