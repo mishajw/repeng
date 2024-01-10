@@ -1,6 +1,5 @@
 # %%
 from pathlib import Path
-from pprint import pprint
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -19,13 +18,8 @@ from repeng.data.types import InputRow
 torch.cuda.empty_cache()
 
 # %%
-# model = "meta-llama/Llama-2-7b-chat-hf"
-# hf_model = LlamaForCausalLM.from_pretrained(model)
-# tokenizer = LlamaTokenizer.from_pretrained(model)
-
 device = torch.device("cuda")
 model = transformer_lens.HookedTransformer.from_pretrained(
-    # "stabilityai/stablelm-tuned-alpha-7b",
     "gptj",
     device=device,
     dtype=torch.bfloat16,
@@ -53,21 +47,6 @@ activation_rows_v1 = (
     )
     .get()
 )
-# activation_rows_v2 = (
-#     mppr.init(
-#         "initial_v2",
-#         Path("output"),
-#         init_fn=create_addition_rows_v2,
-#         to=InputRow,
-#     )
-#     .limit(500)
-#     .map(
-#         "activations_v2",
-#         lambda _, row: get_activations(model=model, input_row=row, layers=layers),
-#         to="pickle",  # required for numpy arrays.
-#     )
-#     .get()
-# )
 activation_rows = activation_rows_v1
 
 # %%
@@ -170,13 +149,3 @@ sns.histplot(data=df, x="logprobs", hue="is_text_true")
 plt.show()
 sns.histplot(data=df, x="logprobs", hue="does_text_contain_true")
 plt.show()
-
-# %%
-pprint(activation_rows[0].input_row.model_dump())
-pprint(activation_rows[0].token_logprobs.sum())
-pprint(activation_rows[1].input_row.model_dump())
-pprint(activation_rows[1].token_logprobs.sum())
-pprint(activation_rows[2].input_row.model_dump())
-pprint(activation_rows[2].token_logprobs.sum())
-pprint(activation_rows[3].input_row.model_dump())
-pprint(activation_rows[3].token_logprobs.sum())
