@@ -1,7 +1,14 @@
+from typing import TypeVar
+
 import numpy as np
 import torch
 from pydantic import BaseModel
-from transformer_lens import HookedTransformer
+from transformers import PreTrainedModel, PreTrainedTokenizerFast
+
+from repeng.hooks.grab import grab_many
+from repeng.hooks.points import Point
+
+ModelT = TypeVar("ModelT", bound=PreTrainedModel)
 
 
 class ActivationRow(BaseModel, extra="forbid"):
@@ -15,17 +22,18 @@ class ActivationRow(BaseModel, extra="forbid"):
 
 @torch.inference_mode()
 def get_activations(
-    model: HookedTransformer, text: str, layers: list[str]
+    model: ModelT,
+    tokenizer: PreTrainedTokenizerFast,
+    points: list[Point[ModelT]],
+    text: str,
 ) -> ActivationRow:
-    assert model.tokenizer is not None
-    tokens = model.tokenizer.encode(text)
+    tokens = tokenizer.encode(text)
     tokens = torch.tensor([tokens], device=next(model.parameters()).device)
 
-    logits: torch.Tensor
-    logits, cache = model.run_with_cache(  # type: ignore
-        tokens,
-        names_filter=layers,
-    )
+    with grab_many(model, points) as activation_fn:
+        output = model.forward(tokens)
+        logits: torch.Tensor = output.logits
+        layer_activations = activation_fn()
 
     logprobs = logits.log_softmax(dim=-1)
     logprobs_shifted = logprobs[0, :-1]
@@ -37,8 +45,8 @@ def get_activations(
     return ActivationRow(
         text=text,
         activations={
-            layer: cache[layer].float().squeeze(0)[-1].detach().cpu().numpy()
-            for layer in layers
+            name: activations.float().squeeze(0)[-1].detach().cpu().numpy()
+            for name, activations in layer_activations.items()
         },
         token_logprobs=token_logprobs.float().cpu().numpy(),
     )
