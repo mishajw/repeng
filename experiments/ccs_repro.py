@@ -1,7 +1,9 @@
 # %%
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
@@ -9,7 +11,7 @@ import transformer_lens
 from mppr import mppr
 from sklearn.decomposition import PCA
 
-from repeng.activations import ActivationRow, get_activation_arrays, get_activations
+from repeng.activations import ActivationRow, get_activations
 from repeng.data.amazon import create_amazon_rows
 from repeng.data.probe import train_probe
 from repeng.data.types import InputRow
@@ -22,7 +24,7 @@ device = torch.device("cuda")
 model = transformer_lens.HookedTransformer.from_pretrained(
     "gptj",
     device=device,
-    dtype=torch.bfloat16,
+    dtype=torch.bfloat16,  # type: ignore
 )
 layers = [f"blocks.{i}.hook_resid_post" for i in range(len(model.blocks))]
 
@@ -32,31 +34,91 @@ with torch.inference_mode():
     list(cache.keys())
 
 # %%
-activation_rows_v1 = (
-    mppr.init(
-        "initial_v1",
-        Path("output"),
-        init_fn=create_amazon_rows,
-        to=InputRow,
-    )
-    .limit(500)
-    .map(
-        "activations_v1",
-        lambda _, row: get_activations(model=model, input_row=row, layers=layers),
-        to="pickle",  # required for numpy arrays.
-    )
-    .get()
+
+inputs = mppr.init(
+    "initial_v1",
+    Path("output"),
+    init_fn=create_amazon_rows,
+    to=InputRow,
+).limit(500)
+data = inputs.map(
+    "activations_v1",
+    lambda _, row: get_activations(model=model, text=row.text, layers=layers),
+    to="pickle",  # required for numpy arrays.
 )
-activation_rows = activation_rows_v1
+
 
 # %%
-activation_rows: list[ActivationRow] = mppr.load(
-    "activations_v1",
-    Path("output"),
-    to="pickle",
+@dataclass
+class ActivationAndInputRow:
+    input: InputRow
+    activation: ActivationRow
+
+
+activation_rows: list[ActivationAndInputRow] = inputs.join(
+    data, lambda _, i, a: ActivationAndInputRow(input=i, activation=a)
 ).get()
 activation_rows = activation_rows[: len(activation_rows) // 2 * 2]
 len(activation_rows)
+
+
+# %%
+@dataclass
+class ActivationArrays:
+    rows_1: list[InputRow]
+    rows_2: list[InputRow]
+    activations_1: np.ndarray
+    activations_2: np.ndarray
+    logprobs_1: np.ndarray
+    logprobs_2: np.ndarray
+    is_text_true: np.ndarray
+
+
+def get_activation_arrays(
+    rows: list[ActivationAndInputRow],
+    layer: str,
+    normalize: bool = True,
+) -> ActivationArrays:
+    rows = sorted(rows, key=lambda r: r.input.does_text_contain_true)
+    rows = sorted(rows, key=lambda r: r.input.pair_idx)
+    rows_1 = [row for row in rows if row.input.does_text_contain_true]
+    rows_2 = [row for row in rows if not row.input.does_text_contain_true]
+    assert all(
+        r1.input.pair_idx == r2.input.pair_idx
+        and r1.input.does_text_contain_true
+        and not r2.input.does_text_contain_true
+        for r1, r2 in zip(rows_1, rows_2)
+    )
+
+    activations_1 = np.stack([row.activation.activations[layer] for row in rows_1])
+    activations_2 = np.stack([row.activation.activations[layer] for row in rows_2])
+    if normalize:
+        activations_1 = (activations_1 - np.mean(activations_1, axis=0)) / np.std(
+            activations_1, axis=0
+        )
+        activations_2 = (activations_2 - np.mean(activations_2, axis=0)) / np.std(
+            activations_2, axis=0
+        )
+
+    logprobs_1 = np.array(
+        [row.activation.token_logprobs.sum().item() for row in rows_1]
+    )
+    logprobs_2 = np.array(
+        [row.activation.token_logprobs.sum().item() for row in rows_2]
+    )
+
+    is_text_true = np.array([row.input.is_text_true for row in rows_1])
+
+    return ActivationArrays(
+        rows_1=[r.input for r in rows_1],
+        rows_2=[r.input for r in rows_2],
+        activations_1=activations_1,
+        activations_2=activations_2,
+        logprobs_1=logprobs_1,
+        logprobs_2=logprobs_2,
+        is_text_true=is_text_true,
+    )
+
 
 # %%
 activation_arrays = get_activation_arrays(
@@ -66,14 +128,6 @@ lp1 = activation_arrays.logprobs_1 - activation_arrays.logprobs_1.mean()
 lp2 = activation_arrays.logprobs_2 - activation_arrays.logprobs_2.mean()
 print((lp1 > lp2).mean())
 print(((lp1 > lp2) == activation_arrays.is_text_true).mean())
-
-# %%
-for i in range(5):
-    print(repr(activation_arrays.rows_1[i].input_row.text))
-    print(activation_arrays.rows_1[i].token_logprobs[-1])
-    print(repr(activation_arrays.rows_2[i].input_row.text))
-    print(activation_arrays.rows_2[i].token_logprobs[-1])
-    print()
 
 # %%
 for layer in layers:
@@ -90,14 +144,6 @@ for layer in layers:
     )
     pred_is_text_true = (pred_is_text_true > 0.5).squeeze(1).cpu().numpy()
     print((pred_is_text_true == activation_arrays.is_text_true).mean())
-
-# %%
-print(activation_arrays.rows_1[0].input_row)
-print(activation_arrays.rows_2[0].input_row)
-print(activation_arrays.rows_1[1].input_row)
-print(activation_arrays.rows_2[1].input_row)
-print(activation_arrays.rows_1[2].input_row)
-print(activation_arrays.rows_2[2].input_row)
 
 # %%
 pca = PCA(n_components=6)
@@ -117,11 +163,11 @@ for i in range(0, 6, 2):
 df = pd.DataFrame(
     [
         {
-            "id": row.input_row.pair_idx,
-            "text": row.input_row.text,
-            "is_text_true": row.input_row.is_text_true,
-            "does_text_contain_true": row.input_row.does_text_contain_true,
-            "activation": row.activations,
+            "id": row.input.pair_idx,
+            "text": row.input.text,
+            "is_text_true": row.input.is_text_true,
+            "does_text_contain_true": row.input.does_text_contain_true,
+            "activation": row.activation.activations,
         }
         for row in activation_rows
     ]
@@ -137,10 +183,10 @@ mean_contains_false = torch.stack(
 df = pd.DataFrame(
     [
         dict(
-            is_text_true=row.input_row.is_text_true,
-            does_text_contain_true=row.input_row.does_text_contain_true,
+            is_text_true=row.input.is_text_true,
+            does_text_contain_true=row.input.does_text_contain_true,
             # logprobs=row.token_logprobs.sum(),
-            logprobs=row.token_logprobs[-1].item(),
+            logprobs=row.activation.token_logprobs[-1].item(),
         )
         for row in activation_rows
     ]
