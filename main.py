@@ -10,10 +10,10 @@ import transformer_lens
 from mppr import mppr
 from sklearn.decomposition import PCA
 
-from ccs.activations import ActivationRow, get_activation_arrays, get_activations
-from ccs.data.amazon import create_amazon_rows
-from ccs.data.probe import train_probe
-from ccs.data.types import InputRow
+from repeng.activations import ActivationRow, get_activation_arrays, get_activations
+from repeng.data.amazon import create_amazon_rows
+from repeng.data.probe import train_probe
+from repeng.data.types import InputRow
 
 # %%
 torch.cuda.empty_cache()

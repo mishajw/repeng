@@ -1,7 +1,7 @@
 import random
 from typing import Literal
 
-from ccs.data.types import InputRow
+from repeng.data.types import InputRow
 
 
 def create_addition_rows() -> dict[str, InputRow]:

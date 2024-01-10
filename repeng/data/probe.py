@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 
-from ccs.activations import ActivationArrays
+from repeng.activations import ActivationArrays
 
 
 def train_probe(

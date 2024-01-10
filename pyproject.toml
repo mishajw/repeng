@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ccs"
+name = "repeng"
 version = "0.1.0"
 description = ""
 authors = ["Misha Wagner <mishajw@gmail.com>"]

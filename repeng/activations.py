@@ -5,7 +5,7 @@ import torch
 from pydantic import BaseModel
 from transformer_lens import HookedTransformer
 
-from ccs.data.types import InputRow
+from repeng.data.types import InputRow
 
 
 class ActivationRow(BaseModel, extra="forbid"):
