@@ -9,6 +9,9 @@ from repeng.datasets.types import BinaryRow
 _DATASET_ID = "true_false"
 
 
+# TODO: Use the prompt template from the paper. I'm not entirely sure how to set it up,
+# it seems that they only use true statements, but also say "an honest" vs. "a
+# dishonest" person in the prompt. I should look at the code I guess?
 def get_true_false_dataset() -> dict[str, BinaryRow]:
     result = {}
     dfs = _download_dataframes()
