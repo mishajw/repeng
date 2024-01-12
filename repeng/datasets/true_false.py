@@ -3,22 +3,23 @@ import zipfile
 
 import pandas as pd
 import requests
-from pydantic import BaseModel
+
+from repeng.datasets.types import BinaryRow
+
+_DATASET_ID = "true_false"
 
 
-class TrueFalseRow(BaseModel, extra="forbid"):
-    statement: str
-    is_true: bool
-
-
-def get_true_false_dataset() -> dict[str, TrueFalseRow]:
+def get_true_false_dataset() -> dict[str, BinaryRow]:
     result = {}
     dfs = _download_dataframes()
     for csv_name, df in dfs.items():
         for index, row in df.iterrows():
-            result[f"{csv_name}-{index}"] = TrueFalseRow(
-                statement=row["statement"],
+            result[f"{csv_name}-{index}"] = BinaryRow(
+                dataset_id=_DATASET_ID,
+                text=row["statement"],
                 is_true=row["label"] == 1,
+                format_args=dict(),
+                format_style="misc",
             )
     return result
 

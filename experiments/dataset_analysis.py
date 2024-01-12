@@ -7,21 +7,26 @@ from repeng.datasets.arc import get_arc
 from repeng.datasets.common_sense_qa import get_common_sense_qa
 from repeng.datasets.open_book_qa import get_open_book_qa
 from repeng.datasets.race import get_race
-from repeng.datasets.types import PairedBinaryRow
+from repeng.datasets.true_false import get_true_false_dataset
+from repeng.datasets.types import BinaryRow, PairedBinaryRow
 
 # %%
-dataset: dict[str, PairedBinaryRow] = {
+binary_datasets: dict[str, BinaryRow] = {
+    **get_true_false_dataset(),
+}
+paired_binary_datasets: dict[str, PairedBinaryRow] = {
     **get_arc("ARC-Challenge"),
     **get_arc("ARC-Easy"),
     **get_common_sense_qa(),
     **get_open_book_qa(),
     **get_race(),
 }
+datasets = {**binary_datasets, **paired_binary_datasets}
 
 # %%
 df = pd.DataFrame(
-    [row.model_dump() for row in dataset.values()],
-    index=list(dataset.keys()),
+    [row.model_dump() for row in datasets.values()],
+    index=list(datasets.keys()),
 )
 df["word_counts"] = df["text"].apply(
     lambda row: len(row.split()),  # type: ignore

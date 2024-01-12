@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+FormatStyle = Literal["lat", "misc"]
+
 
 class PairedBinaryRow(BaseModel, extra="forbid"):
     dataset_id: str
@@ -9,7 +11,15 @@ class PairedBinaryRow(BaseModel, extra="forbid"):
     text: str
     is_true: bool
     format_args: dict[str, str]
-    format_style: Literal["lat"]
+    format_style: FormatStyle
+
+
+class BinaryRow(BaseModel, extra="forbid"):
+    dataset_id: str
+    text: str
+    is_true: bool
+    format_args: dict[str, str]
+    format_style: FormatStyle
 
 
 class InputRow(BaseModel, extra="forbid"):
