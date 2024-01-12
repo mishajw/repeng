@@ -8,24 +8,33 @@ from repeng.datasets.truthful_qa import get_truthful_qa
 from repeng.datasets.types import BinaryRow
 
 
-def get_all_datasets() -> dict[str, BinaryRow | BinaryRow]:
-    binary_datasets: dict[str, BinaryRow] = {
-        **get_true_false_dataset(),
-        **get_geometry_of_truth("cities"),
-        **get_geometry_of_truth("neg_cities"),
-        **get_geometry_of_truth("sp_en_trans"),
-        **get_geometry_of_truth("neg_sp_en_trans"),
-        **get_geometry_of_truth("larger_than"),
-        **get_geometry_of_truth("smaller_than"),
-        **get_geometry_of_truth("cities_cities_conj"),
-        **get_geometry_of_truth("cities_cities_disj"),
-    }
-    paired_binary_datasets: dict[str, BinaryRow] = {
-        **get_arc("challenge"),
-        **get_arc("easy"),
-        **get_common_sense_qa(),
-        **get_open_book_qa(),
-        **get_race(),
-        **get_truthful_qa(),
-    }
-    return {**binary_datasets, **paired_binary_datasets}
+def get_all_datasets(
+    limit_per_dataset: int | None = None,
+) -> dict[str, BinaryRow | BinaryRow]:
+    if limit_per_dataset is None:
+        limit_per_dataset = 1000
+
+    dataset_fns = [
+        get_true_false_dataset,
+        lambda: get_geometry_of_truth("cities"),
+        lambda: get_geometry_of_truth("neg_cities"),
+        lambda: get_geometry_of_truth("sp_en_trans"),
+        lambda: get_geometry_of_truth("neg_sp_en_trans"),
+        lambda: get_geometry_of_truth("larger_than"),
+        lambda: get_geometry_of_truth("smaller_than"),
+        lambda: get_geometry_of_truth("cities_cities_conj"),
+        lambda: get_geometry_of_truth("cities_cities_disj"),
+        lambda: get_arc("challenge"),
+        lambda: get_arc("easy"),
+        lambda: get_common_sense_qa(),
+        lambda: get_open_book_qa(),
+        lambda: get_race(),
+        lambda: get_truthful_qa(),
+    ]
+
+    result = {}
+    for dataset_fn in dataset_fns:
+        dataset = dataset_fn()
+        dataset_limited = {k: v for k, v in list(dataset.items())[:limit_per_dataset]}
+        result.update(dataset_limited)
+    return result
