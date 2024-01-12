@@ -50,3 +50,13 @@ ax = sns.barplot(df.groupby("dataset_id")["is_true"].mean())
 plt.title("Percent of true prompts by dataset")
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
 plt.show()
+
+# %%
+for dataset_id in df["dataset_id"].unique():
+    row = df[df["dataset_id"] == dataset_id].sample(1)
+    print("#", dataset_id)
+    print("## text")
+    print(row["text"].item())
+    print("## is true")
+    print(row["is_true"].item())
+    print()
