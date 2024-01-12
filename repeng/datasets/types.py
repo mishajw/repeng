@@ -2,19 +2,14 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-FormatStyle = Literal["lat", "misc"]
-
 
 class BinaryRow(BaseModel, extra="forbid"):
     dataset_id: str
     text: str
     is_true: bool
     format_args: dict[str, str]
-    format_style: FormatStyle
-
-
-class PairedBinaryRow(BinaryRow, extra="forbid"):
-    pair_id: str
+    format_style: Literal["lat", "misc"]
+    pair_id: str | None = None
 
 
 # deprecated

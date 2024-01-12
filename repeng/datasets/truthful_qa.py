@@ -2,7 +2,7 @@ from typing import Any
 
 import datasets
 
-from repeng.datasets.types import PairedBinaryRow
+from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "truthful_qa"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.1.
@@ -14,7 +14,7 @@ _TEMPLATE = (
 )
 
 
-def get_truthful_qa() -> dict[str, PairedBinaryRow]:
+def get_truthful_qa() -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("truthful_qa", "generation")
     results = {}
     for pair_id, row in enumerate(dataset["validation"]):
@@ -24,7 +24,7 @@ def get_truthful_qa() -> dict[str, PairedBinaryRow]:
         ]
         for answer_idx, (answer, is_correct) in enumerate(answers):
             format_args = dict(question=row["question"], answer=answer)
-            results[f"{_DATASET_ID}-{pair_id}-{answer_idx}"] = PairedBinaryRow(
+            results[f"{_DATASET_ID}-{pair_id}-{answer_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
                 pair_id=str(pair_id),
                 text=_TEMPLATE.format(**format_args),
