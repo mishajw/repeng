@@ -16,8 +16,8 @@ binary_datasets: dict[str, BinaryRow] = {
     **get_true_false_dataset(),
 }
 paired_binary_datasets: dict[str, PairedBinaryRow] = {
-    **get_arc("ARC-Challenge"),
-    **get_arc("ARC-Easy"),
+    **get_arc("challenge"),
+    **get_arc("easy"),
     **get_common_sense_qa(),
     **get_open_book_qa(),
     **get_race(),
