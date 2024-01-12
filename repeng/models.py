@@ -5,6 +5,7 @@ from transformers import (
     AutoTokenizer,
     GPT2LMHeadModel,
     GPTNeoXForCausalLM,
+    LlamaForCausalLM,
     PreTrainedTokenizerFast,
 )
 
@@ -60,8 +61,28 @@ def pythia(
     )
 
 
-def llama2_13b() -> tuple[AutoModelForCausalLM, PreTrainedTokenizerFast]:
-    model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-2-13b-chat-hf")
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-13b-chat-hf")
+def llama2_13b(
+    size: Literal["7b", "13b", "70b"],
+    *,
+    chat: bool,
+) -> tuple[LlamaForCausalLM, PreTrainedTokenizerFast, list[Point[LlamaForCausalLM]]]:
+    if chat:
+        model_str = f"meta-llama/Llama-2-{size}-chat-hf"
+    else:
+        model_str = f"meta-llama/Llama-2-{size}-hf"
+    model = AutoModelForCausalLM.from_pretrained(model_str)
+    assert isinstance(model, LlamaForCausalLM)
+    tokenizer = AutoTokenizer.from_pretrained(model_str)
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
-    return model, tokenizer
+    return (
+        model,
+        tokenizer,
+        [
+            Point(
+                f"h{i}",
+                lambda model: model.model.layers[i],
+                tensor_extractor=TupleTensorExtractor(0),
+            )
+            for i in range(len(model.model.layers))
+        ],
+    )
