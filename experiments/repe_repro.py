@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
@@ -12,11 +13,33 @@ from torchtyping import TensorType
 from repeng import models
 from repeng.activations import ActivationRow, get_activations
 from repeng.data.true_false import TrueFalseRow, get_true_false_dataset
+from repeng.hooks.grab import grab
 from repeng.hooks.patch import patch
 
 # %%
+device = torch.device("cuda")
+
+# %%
 # model, tokenizer, points = models.gpt2()
-model, tokenizer, points = models.pythia("1b")
+# model, tokenizer, points = models.pythia("1b")
+model, tokenizer, points = models.llama2_13b("7b", chat=True)
+
+# %%
+print(set(p.device for p in model.parameters()))
+print(set(p.dtype for p in model.parameters()))
+
+# %%
+# model = model.to(dtype=torch.bfloat16)
+model = model.to(device=device)
+
+
+# %%
+torch.set_grad_enabled(False)
+
+# %%
+with grab(model, points[-1]) as get_activation:
+    model.forward(torch.tensor([[0]], device=device))
+    print(get_activation().shape)
 
 
 # %%
@@ -36,7 +59,7 @@ def format_input(row: TrueFalseRow) -> str:
 
 input = mppr.init(
     "initial",
-    base_dir=Path("output/repe_repro_pythia-2.8b"),
+    base_dir=Path("output/repe_repro_llama2_7b"),
     init_fn=get_true_false_dataset,
     to=TrueFalseRow,
 ).limit(
@@ -67,7 +90,7 @@ df = (
         lambda row: dict(
             statement=row.input.statement,
             is_true=row.input.is_true,
-            activation=row.activation.activations["h10"],
+            activation=row.activation.activations[points[-1].name],
             logprobs=row.activation.token_logprobs,
         )
     )
@@ -93,14 +116,20 @@ activation_diffs = (activation_diffs - np.mean(activation_diffs, axis=0)) / np.s
     activation_diffs, axis=0
 )
 
-pca = PCA(n_components=1)
+pca = PCA(n_components=4)
 pca.fit_transform(activation_diffs)
-df["pca"] = df["activation"].apply(
-    lambda a: (pca.components_ @ a).item(),  # type: ignore
-)
-truth_activation = pca.components_.squeeze(0)
+for i in range(4):
+    df[f"pca_{i}"] = df["activation"].apply(
+        lambda a: (pca.components_[i] @ a).item(),  # type: ignore
+    )
 
-sns.histplot(data=df, x="pca", hue="is_true")
+# %%
+sns.scatterplot(data=df, x="pca_0", y="pca_1", hue="is_true")
+plt.show()
+sns.scatterplot(data=df, x="pca_1", y="pca_2", hue="is_true")
+plt.show()
+sns.scatterplot(data=df, x="pca_2", y="pca_3", hue="is_true")
+plt.show()
 
 # %%
 batch, seq, hidden = None, None, None
@@ -109,7 +138,8 @@ batch, seq, hidden = None, None, None
 def patch_fn(
     tensor: TensorType["batch", "seq", "hidden"],
 ) -> TensorType["batch", "seq", "hidden"]:
-    tensor[:, :] -= truth_activation
+    # tensor[:, :] -= truth_activation.to(device=device)
+    tensor[:, :] -= torch.tensor(pca.components_[0], device=device)
     return tensor
 
 
@@ -119,12 +149,12 @@ def generate():
             # "Q: What city is the Eiffel Tower in? A: Paris\n"
             # "Q: What city is Westminster in? A: London\n"
             # "Q: What city is the Colosseum in? A:"
-            "Q: What's the capital of France? A: Paris\n"
-            "Q: What's the capital of Germany? A: Berlin\n"
-            "Q: What's the capital of Spain? A:\n"
+            # "Q: What's the capital of France? A: Paris\n"
+            # "Q: What's the capital of Germany? A: Berlin\n"
+            "Q: What's the capital of Spain? A:"
         ),
         return_tensors="pt",
-    )
+    ).to(device=device)
     assert isinstance(input, torch.Tensor)
     output = model.generate(input, max_new_tokens=5)
     assert isinstance(output, torch.Tensor)
