@@ -12,7 +12,7 @@ from torchtyping import TensorType
 
 from repeng import models
 from repeng.activations import ActivationRow, get_activations
-from repeng.data.true_false import TrueFalseRow, get_true_false_dataset
+from repeng.datasets.true_false import TrueFalseRow, get_true_false_dataset
 from repeng.hooks.grab import grab
 from repeng.hooks.patch import patch
 
