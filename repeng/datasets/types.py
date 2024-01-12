@@ -5,15 +5,6 @@ from pydantic import BaseModel
 FormatStyle = Literal["lat", "misc"]
 
 
-class PairedBinaryRow(BaseModel, extra="forbid"):
-    dataset_id: str
-    pair_id: str
-    text: str
-    is_true: bool
-    format_args: dict[str, str]
-    format_style: FormatStyle
-
-
 class BinaryRow(BaseModel, extra="forbid"):
     dataset_id: str
     text: str
@@ -22,6 +13,11 @@ class BinaryRow(BaseModel, extra="forbid"):
     format_style: FormatStyle
 
 
+class PairedBinaryRow(BinaryRow, extra="forbid"):
+    pair_id: str
+
+
+# deprecated
 class InputRow(BaseModel, extra="forbid"):
     pair_idx: str
     text: str
