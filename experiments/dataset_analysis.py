@@ -8,6 +8,7 @@ from repeng.datasets.common_sense_qa import get_common_sense_qa
 from repeng.datasets.open_book_qa import get_open_book_qa
 from repeng.datasets.race import get_race
 from repeng.datasets.true_false import get_true_false_dataset
+from repeng.datasets.truthful_qa import get_truthful_qa
 from repeng.datasets.types import BinaryRow, PairedBinaryRow
 
 # %%
@@ -20,6 +21,7 @@ paired_binary_datasets: dict[str, PairedBinaryRow] = {
     **get_common_sense_qa(),
     **get_open_book_qa(),
     **get_race(),
+    **get_truthful_qa(),
 }
 datasets = {**binary_datasets, **paired_binary_datasets}
 
@@ -31,7 +33,9 @@ df = pd.DataFrame(
 df["word_counts"] = df["text"].apply(
     lambda row: len(row.split()),  # type: ignore
 )
+df
 
+# %%
 ax = sns.barplot(data=df["dataset_id"].value_counts())
 ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
 plt.title("Num rows by dataset")
