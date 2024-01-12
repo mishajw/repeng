@@ -3,7 +3,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-class PairedText(BaseModel, extra="forbid"):
+class PairedBinaryRow(BaseModel, extra="forbid"):
     dataset_id: str
     pair_id: str
     text: str

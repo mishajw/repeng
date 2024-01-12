@@ -7,10 +7,10 @@ from repeng.datasets.arc import get_arc
 from repeng.datasets.common_sense_qa import get_common_sense_qa
 from repeng.datasets.open_book_qa import get_open_book_qa
 from repeng.datasets.race import get_race
-from repeng.datasets.types import PairedText
+from repeng.datasets.types import PairedBinaryRow
 
 # %%
-dataset: dict[str, PairedText] = {
+dataset: dict[str, PairedBinaryRow] = {
     **get_arc("ARC-Challenge"),
     **get_arc("ARC-Easy"),
     **get_common_sense_qa(),

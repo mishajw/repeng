@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 import datasets
 
-from repeng.datasets.types import PairedText
+from repeng.datasets.types import PairedBinaryRow
 
 # Taken from https://arxiv.org/abs/2310.01405 D.1.4.
 _TEMPLATE = (
@@ -14,7 +14,7 @@ _TEMPLATE = (
 )
 
 
-def get_arc(subset: Literal["ARC-Easy", "ARC-Challenge"]) -> dict[str, PairedText]:
+def get_arc(subset: Literal["ARC-Easy", "ARC-Challenge"]) -> dict[str, PairedBinaryRow]:
     dataset: Any = datasets.load_dataset("ai2_arc", subset)
     results = {}
     for row in dataset["train"]:
@@ -23,7 +23,7 @@ def get_arc(subset: Literal["ARC-Easy", "ARC-Challenge"]) -> dict[str, PairedTex
             row["choices"]["text"], row["choices"]["label"], strict=True
         ):
             format_args = dict(question=row["question"], answer=choice)
-            results[f"{subset}-{pair_id}-{choice_label}"] = PairedText(
+            results[f"{subset}-{pair_id}-{choice_label}"] = PairedBinaryRow(
                 dataset_id=subset,
                 pair_id=pair_id,
                 text=_TEMPLATE.format(**format_args),

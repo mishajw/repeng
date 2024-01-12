@@ -2,7 +2,7 @@ from typing import Any
 
 import datasets
 
-from repeng.datasets.types import PairedText
+from repeng.datasets.types import PairedBinaryRow
 
 _DATASET_ID = "race"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.7.
@@ -19,7 +19,7 @@ _TEMPLATE = (
 _ANSWER_TO_INDEX = {"A": 0, "B": 1, "C": 2, "D": 3}
 
 
-def get_race() -> dict[str, PairedText]:
+def get_race() -> dict[str, PairedBinaryRow]:
     dataset: Any = datasets.load_dataset("race", "all")
     results = {}
     for row in dataset["train"]:
@@ -28,7 +28,7 @@ def get_race() -> dict[str, PairedText]:
             format_args = dict(
                 article=row["article"], question=row["question"], answer=option
             )
-            results[f"{_DATASET_ID}-{pair_id}-{option_idx}"] = PairedText(
+            results[f"{_DATASET_ID}-{pair_id}-{option_idx}"] = PairedBinaryRow(
                 dataset_id=_DATASET_ID,
                 pair_id=pair_id,
                 text=_TEMPLATE.format(**format_args),

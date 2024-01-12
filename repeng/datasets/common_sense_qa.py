@@ -2,7 +2,7 @@ from typing import Any
 
 import datasets
 
-from repeng.datasets.types import PairedText
+from repeng.datasets.types import PairedBinaryRow
 
 _DATASET_ID = "common_sense_qa"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.6.
@@ -15,7 +15,7 @@ _TEMPLATE = (
 )
 
 
-def get_common_sense_qa() -> dict[str, PairedText]:
+def get_common_sense_qa() -> dict[str, PairedBinaryRow]:
     dataset: Any = datasets.load_dataset("commonsense_qa")
     results = {}
     for row in dataset["train"]:
@@ -24,7 +24,7 @@ def get_common_sense_qa() -> dict[str, PairedText]:
             row["choices"]["text"], row["choices"]["label"], strict=True
         ):
             format_args = dict(question=row["question"], answer=choice)
-            results[f"{_DATASET_ID}-{pair_id}-{choice_label}"] = PairedText(
+            results[f"{_DATASET_ID}-{pair_id}-{choice_label}"] = PairedBinaryRow(
                 dataset_id=_DATASET_ID,
                 pair_id=pair_id,
                 text=_TEMPLATE.format(**format_args),
