@@ -6,10 +6,10 @@ from pyparsing import Any
 
 from repeng.datasets.types import InputRow
 
-amazon_polarity: Any = datasets.load_dataset("amazon_polarity")
-
 
 def create_amazon_rows() -> dict[str, InputRow]:
+    amazon_polarity: Any = datasets.load_dataset("amazon_polarity")
+
     def format(title: str, content: str, label: Literal["Positive", "Negative"]) -> str:
         return (
             f"Title: {title}\n"

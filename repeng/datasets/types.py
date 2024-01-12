@@ -1,4 +1,15 @@
+from typing import Literal
+
 from pydantic import BaseModel
+
+
+class PairedText(BaseModel, extra="forbid"):
+    dataset_id: str
+    pair_id: str
+    text: str
+    is_true: bool
+    format_args: dict[str, str]
+    format_style: Literal["lat"]
 
 
 class InputRow(BaseModel, extra="forbid"):
