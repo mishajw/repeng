@@ -46,18 +46,18 @@ df
 
 # %%
 ax = sns.barplot(data=df["dataset_id"].value_counts())
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.title("Num rows by dataset")
 plt.show()
 
 ax = sns.barplot(df.groupby("dataset_id")["word_counts"].mean())
 plt.title("Average number of words per prompt by dataset")
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.show()
 
 ax = sns.barplot(df.groupby("dataset_id")["is_true"].mean())
 plt.title("Percent of true prompts by dataset")
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.show()
 
 # %%
