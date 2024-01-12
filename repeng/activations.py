@@ -13,6 +13,7 @@ ModelT = TypeVar("ModelT", bound=PreTrainedModel)
 
 class ActivationRow(BaseModel, extra="forbid"):
     text: str
+    text_tokenized: list[str]
     activations: dict[str, np.ndarray]
     token_logprobs: np.ndarray
 
@@ -28,6 +29,8 @@ def get_activations(
     text: str,
 ) -> ActivationRow:
     tokens = tokenizer.encode(text)
+    tokens_str = tokenizer.tokenize(text)
+    tokens = tokenizer.convert_tokens_to_ids(tokens_str)
     tokens = torch.tensor([tokens], device=next(model.parameters()).device)
 
     with grab_many(model, points) as activation_fn:
@@ -44,6 +47,7 @@ def get_activations(
 
     return ActivationRow(
         text=text,
+        text_tokenized=tokens_str,
         activations={
             name: activations.float().squeeze(0)[-1].detach().cpu().numpy()
             for name, activations in layer_activations.items()
