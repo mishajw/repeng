@@ -4,7 +4,7 @@ from typing import Literal
 import datasets
 from pyparsing import Any
 
-from repeng.data.types import InputRow
+from repeng.datasets.types import InputRow
 
 amazon_polarity: Any = datasets.load_dataset("amazon_polarity")
 
