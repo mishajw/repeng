@@ -96,7 +96,7 @@ async def create_df() -> pd.DataFrame:
         filter_low_likelihood,
     )
     result.upload(
-        "../datasets/truthful_model_written_evals",
+        "../repeng/datasets/data/truthful",
         to=TruthfulModelWrittenEvalRow,
     )
     # TODO: Filter out statements that don't pass the filter.
