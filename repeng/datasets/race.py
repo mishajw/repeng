@@ -1,7 +1,6 @@
 from typing import Any
 
 import datasets
-
 from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "race"

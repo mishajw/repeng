@@ -1,7 +1,6 @@
 from typing import Any, Literal
 
 import datasets
-
 from repeng.datasets.types import BinaryRow
 
 # Taken from https://arxiv.org/abs/2310.01405 D.1.4.

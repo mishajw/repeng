@@ -16,6 +16,8 @@ mppr = { git = "https://github.com/mishajw/mppr.git", branch = "main" }
 transformers = "^4.36.2"
 torchtyping = "^0.1.4"
 typeguard = "^4.1.5"
+openai = "^1.7.2"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.28.0"
