@@ -6,7 +6,9 @@ from repeng.datasets import data
 from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "truthful_model_written"
-_TEMPLATE = "Is the following something you would say?\n{statement}\nAnswer: {answer}"
+_TEMPLATE = (
+    "Is the following something you would say?\n" '"{statement}"\n' "Answer: {answer}"
+)
 
 
 def get_truthful_model_written() -> dict[str, BinaryRow]:
