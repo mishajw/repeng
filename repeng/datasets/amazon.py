@@ -1,9 +1,9 @@
 import itertools
 from typing import Literal
 
+import datasets
 from pyparsing import Any
 
-import datasets
 from repeng.datasets.types import InputRow
 
 

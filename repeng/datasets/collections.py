@@ -4,6 +4,7 @@ from repeng.datasets.geometry_of_truth import get_geometry_of_truth
 from repeng.datasets.open_book_qa import get_open_book_qa
 from repeng.datasets.race import get_race
 from repeng.datasets.true_false import get_true_false_dataset
+from repeng.datasets.truthful_model_written import get_truthful_model_written
 from repeng.datasets.truthful_qa import get_truthful_qa
 from repeng.datasets.types import BinaryRow
 
@@ -30,6 +31,7 @@ def get_all_datasets(
         lambda: get_open_book_qa(),
         lambda: get_race(),
         lambda: get_truthful_qa(),
+        lambda: get_truthful_model_written(),
     ]
 
     result = {}
