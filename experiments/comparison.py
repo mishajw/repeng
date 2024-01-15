@@ -8,7 +8,7 @@ from repeng import models
 from repeng.activations import get_activations
 from repeng.datasets.collections import PAIRED_DATASET_IDS, get_all_datasets
 from repeng.datasets.types import BinaryRow
-from repeng.probes.ccs import CcsTrainingConfig, train_ccs_probe
+from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
 from repeng.probes.types import PairedActivations
 
 # %%
