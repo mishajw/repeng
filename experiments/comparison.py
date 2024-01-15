@@ -1,12 +1,15 @@
 # %%
 from pathlib import Path
 
+import numpy as np
 from mppr import mppr
 
 from repeng import models
 from repeng.activations import get_activations
-from repeng.datasets.collections import get_all_datasets
+from repeng.datasets.collections import PAIRED_DATASET_IDS, get_all_datasets
 from repeng.datasets.types import BinaryRow
+from repeng.probes.ccs import CcsTrainingConfig, train_ccs_probe
+from repeng.probes.types import PairedActivations
 
 # %%
 model, tokenizer, points = models.gpt2()
@@ -38,8 +41,25 @@ df = (
             dataset_id=input.dataset_id,
             is_true=input.is_true,
             activations=activations.activations[points[-1].name],
+            pair_id=input.pair_id,
         ),
     )
     .to_dataframe(lambda d: d)
 )
 df
+
+# %%
+df_subset = df[df["dataset_id"].isin(PAIRED_DATASET_IDS)].copy()
+df_subset = df_subset.groupby(["dataset_id", "pair_id", "is_true"]).first()
+df_subset = df_subset.reset_index()
+df_subset = df_subset.pivot(index="pair_id", columns="is_true", values="activations")
+paired_activations = PairedActivations(
+    activations_1=np.stack(df_subset[False].to_list()),
+    activations_2=np.stack(df_subset[False].to_list()),
+)
+
+# %%
+train_ccs_probe(
+    paired_activations,
+    CcsTrainingConfig(num_steps=1000),
+)

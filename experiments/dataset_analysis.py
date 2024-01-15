@@ -43,3 +43,7 @@ for dataset_id in df["dataset_id"].unique():
     print("## is true")
     print(row["is_true"].item())
     print()
+
+# %%
+df["has_pair_id"] = df["pair_id"].apply(lambda x: x is not None)
+df.groupby("dataset_id")["has_pair_id"].sum()

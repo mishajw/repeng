@@ -8,6 +8,15 @@ from repeng.datasets.truthful_model_written import get_truthful_model_written
 from repeng.datasets.truthful_qa import get_truthful_qa
 from repeng.datasets.types import BinaryRow
 
+PAIRED_DATASET_IDS = [
+    "arc_easy",
+    "arc_challenge",
+    "common_sense_qa",
+    "open_book_qa",
+    "race",
+    "truthful_qa",
+]
+
 
 def get_all_datasets(
     limit_per_dataset: int | None = None,
