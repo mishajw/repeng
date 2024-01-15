@@ -24,9 +24,8 @@ class CcsProbe(torch.nn.Module):
 
 @dataclass
 class CcsTrainingConfig:
-    # TODO: Check this against the paper.
-    num_steps: int = 100
-    lr: float = 0.001
+    num_steps: int = 10
+    lr: float = 0.01
 
 
 def train_ccs_probe(
