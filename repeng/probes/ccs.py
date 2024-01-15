@@ -1,3 +1,7 @@
+"""
+Replication of the CCS probes described in <https://arxiv.org/abs/2212.03827>.
+"""
+
 from dataclasses import dataclass
 
 import torch
