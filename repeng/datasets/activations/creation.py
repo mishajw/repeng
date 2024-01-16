@@ -19,7 +19,11 @@ class BinaryRowWithLlm(BinaryRow):
     llm_id: LlmId
 
 
-def create_activations_dataset(llm_ids: list[LlmId]) -> list[ActivationResultRow]:
+def create_activations_dataset(
+    tag: str,
+    num_samples_per_dataset: int,
+    llm_ids: list[LlmId],
+) -> list[ActivationResultRow]:
     inputs = (
         mppr.init(
             "init",
@@ -28,7 +32,7 @@ def create_activations_dataset(llm_ids: list[LlmId]) -> list[ActivationResultRow
             to=BinaryRow,
         )
         .filter(
-            limit_dataset_and_split_fn(100),
+            limit_dataset_and_split_fn(num_samples_per_dataset),
         )
         .flat_map(
             lambda key, row: {
@@ -59,5 +63,8 @@ def create_activations_dataset(llm_ids: list[LlmId]) -> list[ActivationResultRow
                 llm_id=input.llm_id,
             ),
         )
-        .upload("s3://repeng/comparison/activations.jsonl", to=ActivationResultRow)
+        .upload(
+            f"s3://repeng/datasets/activations/{tag}.jsonl",
+            to=ActivationResultRow,
+        )
     ).get()
