@@ -21,6 +21,8 @@ def load_llm_oioo(llm_id: LlmId) -> Llm[Any, Any]:
             del _loaded_llm
             torch.cuda.empty_cache()
             print(f"Unloaded LLM {_loaded_llm_id}, loading LLM {llm_id}")
+        else:
+            print(f"Loading LLM {llm_id}")
         _loaded_llm_id = llm_id
         _loaded_llm = get_llm(llm_id)
     assert _loaded_llm is not None
