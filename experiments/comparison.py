@@ -13,7 +13,8 @@ from repeng.probes.linear_artificial_tomography import (
     LatTrainingConfig,
     train_lat_probe,
 )
-from repeng.probes.types import Activations, PairedActivations
+from repeng.probes.mean_mass_probe import train_mmp_probe
+from repeng.probes.types import Activations, LabeledActivations, PairedActivations
 
 # %%
 model, tokenizer, points = models.gpt2()
@@ -58,6 +59,11 @@ activations = Activations(
     activations=np.stack(df_subset["activations"].to_list()),
 )
 
+labeled_activations = LabeledActivations(
+    activations=activations.activations,
+    labels=df_subset["is_true"].to_numpy(),
+)
+
 df_subset = df_subset.groupby(["dataset_id", "pair_id", "is_true"]).first()
 df_subset = df_subset.reset_index()
 df_subset = df_subset.pivot(index="pair_id", columns="is_true", values="activations")
@@ -74,4 +80,7 @@ ccs_probe = train_ccs_probe(
 lat_probe = train_lat_probe(
     activations,
     LatTrainingConfig(),
+)
+mmp_probe = train_mmp_probe(
+    labeled_activations,
 )
