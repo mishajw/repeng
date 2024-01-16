@@ -1,19 +1,19 @@
 # %%
-from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
 from mppr import mppr
+from pydantic import BaseModel
 
-from repeng.activations.inference import get_model_activations
+from repeng.activations.inference import ActivationRow, get_model_activations
 from repeng.activations.probe_preparations import (
     Activation,
     prepare_activations_for_probes,
 )
 from repeng.datasets.collections import PAIRED_DATASET_IDS, get_datasets
 from repeng.datasets.filters import limit_dataset_and_split_fn
-from repeng.datasets.types import BinaryRow
+from repeng.datasets.types import BinaryRow, Split
 from repeng.evals.probes import evaluate_probe
 from repeng.models.llms import LlmId
 from repeng.models.loading import load_llm_oioo
@@ -25,6 +25,7 @@ from repeng.probes.linear_artificial_tomography import (
     train_lat_probe,
 )
 from repeng.probes.mean_mass_probe import train_mmp_probe
+from repeng.utils.pydantic_ndarray import NdArray
 
 assert load_dotenv()
 
@@ -60,10 +61,16 @@ print(len(inputs.get()))
 
 
 # %%
-@dataclass
-class ActivationAndInputRow(Activation):
-    split: str
+class ActivationResultRow(BaseModel, extra="forbid"):
+    dataset_id: str
+    pair_id: str | None
+    activations: NdArray  # (n, d)
+    label: bool
+    split: Split
     llm_id: LlmId
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 activations_and_inputs = (
@@ -73,11 +80,11 @@ activations_and_inputs = (
             load_llm_oioo(value.llm_id),
             value.text,
         ),
-        to="pickle",
+        to=ActivationRow,
     )
     .join(
         inputs,
-        lambda _, activations, input: ActivationAndInputRow(
+        lambda _, activations, input: ActivationResultRow(
             dataset_id=input.dataset_id,
             split=input.split,
             label=input.is_true,
@@ -86,19 +93,35 @@ activations_and_inputs = (
             llm_id=input.llm_id,
         ),
     )
-    .upload("s3://repeng/comparison/activations/gpt2", to="pickle")
+    .upload("s3://repeng/comparison/activations.jsonl", to=ActivationResultRow)
 )
 
 # %%
 probe_arrays = prepare_activations_for_probes(
-    activations_and_inputs.filter(
-        lambda _, row: row.split == "train" and row.llm_id == "gpt2"
-    ).get()
+    [
+        Activation(
+            dataset_id=row.dataset_id,
+            pair_id=row.pair_id,
+            activations=row.activations,
+            label=row.label,
+        )
+        for row in activations_and_inputs.filter(
+            lambda _, row: row.split == "train" and row.llm_id == "gpt2"
+        ).get()
+    ]
 )
 probe_arrays_validation = prepare_activations_for_probes(
-    activations_and_inputs.filter(
-        lambda _, row: row.split == "validation" and row.llm_id == "gpt2"
-    ).get()
+    [
+        Activation(
+            dataset_id=row.dataset_id,
+            pair_id=row.pair_id,
+            activations=row.activations,
+            label=row.label,
+        )
+        for row in activations_and_inputs.filter(
+            lambda _, row: row.split == "validation" and row.llm_id == "gpt2"
+        ).get()
+    ]
 )
 
 # %%

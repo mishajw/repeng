@@ -1,12 +1,12 @@
 from typing import TypeVar
 
-import numpy as np
 import torch
 from pydantic import BaseModel
 from transformers import PreTrainedModel, PreTrainedTokenizerFast
 
 from repeng.hooks.grab import grab_many
 from repeng.models.llms import Llm
+from repeng.utils.pydantic_ndarray import NdArray
 
 ModelT = TypeVar("ModelT", bound=PreTrainedModel)
 
@@ -14,8 +14,8 @@ ModelT = TypeVar("ModelT", bound=PreTrainedModel)
 class ActivationRow(BaseModel, extra="forbid"):
     text: str
     text_tokenized: list[str]
-    activations: dict[str, np.ndarray]
-    token_logprobs: np.ndarray
+    activations: dict[str, NdArray]
+    token_logprobs: NdArray
 
     class Config:
         arbitrary_types_allowed = True
