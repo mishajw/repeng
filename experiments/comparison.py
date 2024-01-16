@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
-import sklearn.metrics
 from dotenv import load_dotenv
 from mppr import mppr
 
@@ -16,6 +15,7 @@ from repeng.activations.probe_preparations import (
 from repeng.datasets.collections import PAIRED_DATASET_IDS, get_datasets
 from repeng.datasets.filters import limit_dataset_and_split_fn
 from repeng.datasets.types import BinaryRow
+from repeng.evals.probes import evaluate_probe
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
 from repeng.probes.linear_artificial_tomography import (
@@ -95,16 +95,12 @@ probes: dict[str, BaseProbe] = dict(
 )
 
 # %%
-results = []
-for name, probe in probes.items():
-    predictions = probe.predict(probe_arrays_validation.labeled.activations)
-    labels = probe_arrays.labeled.labels
-    if (predictions == labels).mean() < 0.5:
-        predictions = ~predictions
-    f1_score = sklearn.metrics.f1_score(labels, predictions)
-    precision = sklearn.metrics.precision_score(labels, predictions)
-    recall = sklearn.metrics.recall_score(labels, predictions)
-    results.append(
-        dict(name=name, f1_score=f1_score, precision=precision, recall=recall)
-    )
-pd.DataFrame(results)
+pd.DataFrame(
+    [
+        dict(
+            name=name,
+            **evaluate_probe(probe, probe_arrays.labeled).model_dump(),
+        )
+        for name, probe in probes.items()
+    ]
+)
