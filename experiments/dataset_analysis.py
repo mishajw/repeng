@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from repeng.datasets.collections import get_all_datasets
+from repeng.datasets.collections import ALL_DATASET_IDS, get_datasets
 
 # %%
-datasets = get_all_datasets()
+datasets = get_datasets(ALL_DATASET_IDS)
 
 # %%
 df = pd.DataFrame(
@@ -19,7 +19,15 @@ df["word_counts"] = df["text"].apply(
 df
 
 # %%
-ax = sns.barplot(data=df["dataset_id"].value_counts())
+df.groupby(["dataset_id", "split"]).size().reset_index()
+
+# %%
+ax = sns.barplot(
+    data=df.groupby(["dataset_id", "split"]).size().reset_index(),
+    x="dataset_id",
+    y=0,
+    hue="split",
+)
 ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.title("Num rows by dataset")
 plt.show()

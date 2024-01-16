@@ -2,25 +2,34 @@ from typing import Literal
 
 import pandas as pd
 
-from repeng.datasets.types import BinaryRow
+from repeng.datasets.types import BinaryRow, DatasetId
 
-_DATASET_ID = "geometry_of_truth"
+Subset = Literal[
+    "cities",
+    "neg_cities",
+    "sp_en_trans",
+    "neg_sp_en_trans",
+    "larger_than",
+    "smaller_than",
+    "cities_cities_conj",
+    "cities_cities_disj",
+]
+
 _URL = "https://raw.githubusercontent.com/saprmarks/geometry-of-truth/91b2232/datasets"
+_SUBSET_TO_DATASET_ID: dict[Subset, DatasetId] = {
+    "cities": "geometry_of_truth-cities",
+    "neg_cities": "geometry_of_truth-neg_cities",
+    "sp_en_trans": "geometry_of_truth-sp_en_trans",
+    "neg_sp_en_trans": "geometry_of_truth-neg_sp_en_trans",
+    "larger_than": "geometry_of_truth-larger_than",
+    "smaller_than": "geometry_of_truth-smaller_than",
+    "cities_cities_conj": "geometry_of_truth-cities_cities_conj",
+    "cities_cities_disj": "geometry_of_truth-cities_cities_disj",
+}
 
 
-def get_geometry_of_truth(
-    subset: Literal[
-        "cities",
-        "neg_cities",
-        "sp_en_trans",
-        "neg_sp_en_trans",
-        "larger_than",
-        "smaller_than",
-        "cities_cities_conj",
-        "cities_cities_disj",
-    ]
-) -> dict[str, BinaryRow]:
-    dataset_id = f"{_DATASET_ID}-{subset}"
+def get_geometry_of_truth(subset: Subset) -> dict[str, BinaryRow]:
+    dataset_id = _SUBSET_TO_DATASET_ID[subset]
     result = {}
     df = pd.read_csv(f"{_URL}/{subset}.csv")
     for index, row in df.iterrows():

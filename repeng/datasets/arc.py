@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 import datasets
 
-from repeng.datasets.types import BinaryRow, Split
+from repeng.datasets.types import BinaryRow, DatasetId, Split
 
 # Taken from https://arxiv.org/abs/2310.01405 D.1.4.
 _TEMPLATE = (
@@ -13,7 +13,7 @@ _TEMPLATE = (
     "The probability of the answer being correct is"
 )
 _SUBSET_TO_NAME = {"easy": "ARC-Easy", "challenge": "ARC-Challenge"}
-_SUBSET_TO_ID = {"easy": "arc_easy", "challenge": "arc_challenge"}
+_SUBSET_TO_ID: dict[str, DatasetId] = {"easy": "arc_easy", "challenge": "arc_challenge"}
 
 
 def get_arc(subset: Literal["easy", "challenge"]) -> dict[str, BinaryRow]:
