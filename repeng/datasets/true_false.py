@@ -17,8 +17,11 @@ def get_true_false_dataset() -> dict[str, BinaryRow]:
     dfs = _download_dataframes()
     for csv_name, df in dfs.items():
         for index, row in df.iterrows():
+            assert isinstance(index, int)
             result[f"{csv_name}-{index}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
+                # Allocate 20% of the dataset to validation.
+                split="train" if index % 5 != 0 else "validation",
                 text=row["statement"],
                 is_true=row["label"] == 1,
                 format_args=dict(),

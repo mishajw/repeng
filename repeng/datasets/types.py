@@ -2,9 +2,12 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+Split = Literal["train", "validation"]
+
 
 class BinaryRow(BaseModel, extra="forbid"):
     dataset_id: str
+    split: Split
     text: str
     is_true: bool
     format_args: dict[str, str]

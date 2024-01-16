@@ -1,3 +1,5 @@
+from typing import Literal
+
 from repeng.datasets.arc import get_arc
 from repeng.datasets.common_sense_qa import get_common_sense_qa
 from repeng.datasets.geometry_of_truth import get_geometry_of_truth
@@ -7,6 +9,17 @@ from repeng.datasets.true_false import get_true_false_dataset
 from repeng.datasets.truthful_model_written import get_truthful_model_written
 from repeng.datasets.truthful_qa import get_truthful_qa
 from repeng.datasets.types import BinaryRow
+
+DATASET_NAMES: Literal[
+    "arc_challenge",
+    "arc_easy",
+    "cities",
+    "cities_cities_conj",
+    "cities_cities_disj",
+    "common_sense_qa",
+    "larger_than",
+]
+
 
 PAIRED_DATASET_IDS = [
     "arc_easy",

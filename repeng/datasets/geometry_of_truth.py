@@ -24,8 +24,11 @@ def get_geometry_of_truth(
     result = {}
     df = pd.read_csv(f"{_URL}/{subset}.csv")
     for index, row in df.iterrows():
+        assert isinstance(index, int)
         result[f"{dataset_id}-{index}"] = BinaryRow(
             dataset_id=dataset_id,
+            # Allocate 20% of the dataset to validation.
+            split="train" if index % 5 != 0 else "validation",
             text=row["statement"],
             is_true=row["label"] == 1,
             format_args=dict(),

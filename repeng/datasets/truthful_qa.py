@@ -26,6 +26,8 @@ def get_truthful_qa() -> dict[str, BinaryRow]:
             format_args = dict(question=row["question"], answer=answer)
             results[f"{_DATASET_ID}-{pair_id}-{answer_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
+                # Allocate 20% of the dataset to validation.
+                split="train" if pair_id % 5 != 0 else "validation",
                 pair_id=str(pair_id),
                 text=_TEMPLATE.format(**format_args),
                 is_true=is_correct,
