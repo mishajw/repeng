@@ -6,7 +6,6 @@ import pandas as pd
 from dotenv import load_dotenv
 from mppr import mppr
 
-from repeng import models
 from repeng.activations.inference import get_model_activations
 from repeng.activations.probe_preparations import (
     Activation,
@@ -16,6 +15,7 @@ from repeng.datasets.collections import PAIRED_DATASET_IDS, get_datasets
 from repeng.datasets.filters import limit_dataset_and_split_fn
 from repeng.datasets.types import BinaryRow
 from repeng.evals.probes import evaluate_probe
+from repeng.models import llms
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
 from repeng.probes.linear_artificial_tomography import (
@@ -27,7 +27,7 @@ from repeng.probes.mean_mass_probe import train_mmp_probe
 assert load_dotenv()
 
 # %%
-llm = models.gpt2()
+llm = llms.gpt2()
 
 # %%
 inputs = mppr.init(

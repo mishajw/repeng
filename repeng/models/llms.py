@@ -69,7 +69,7 @@ def pythia(
     )
 
 
-def llama2_13b(
+def llama2(
     size: Literal["7b", "13b", "70b"],
     *,
     chat: bool,
