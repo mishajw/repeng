@@ -1,5 +1,5 @@
 # %%
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -70,7 +70,6 @@ activations_and_inputs = (
     )
     .upload("s3://repeng/comparison/activations/gpt2", to="pickle")
 )
-df = activations_and_inputs.to_dataframe(asdict)
 
 # %%
 probe_arrays = prepare_activations_for_probes(
