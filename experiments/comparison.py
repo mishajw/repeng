@@ -17,6 +17,7 @@ from repeng.datasets.types import BinaryRow
 from repeng.evals.probes import evaluate_probe
 from repeng.models.llms import LlmId
 from repeng.models.loading import load_llm_oioo
+from repeng.models.points import get_points
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
 from repeng.probes.linear_artificial_tomography import (
@@ -62,6 +63,7 @@ print(len(inputs.get()))
 @dataclass
 class ActivationAndInputRow(Activation):
     split: str
+    llm_id: LlmId
 
 
 activations_and_inputs = (
@@ -79,8 +81,9 @@ activations_and_inputs = (
             dataset_id=input.dataset_id,
             split=input.split,
             label=input.is_true,
-            activations=activations.activations["TODO"],
+            activations=activations.activations[get_points(input.llm_id)[-1].name],
             pair_id=input.pair_id,
+            llm_id=input.llm_id,
         ),
     )
     .upload("s3://repeng/comparison/activations/gpt2", to="pickle")
@@ -88,10 +91,14 @@ activations_and_inputs = (
 
 # %%
 probe_arrays = prepare_activations_for_probes(
-    activations_and_inputs.filter(lambda _, row: row.split == "train").get()
+    activations_and_inputs.filter(
+        lambda _, row: row.split == "train" and row.llm_id == "gpt2"
+    ).get()
 )
 probe_arrays_validation = prepare_activations_for_probes(
-    activations_and_inputs.filter(lambda _, row: row.split == "validation").get()
+    activations_and_inputs.filter(
+        lambda _, row: row.split == "validation" and row.llm_id == "gpt2"
+    ).get()
 )
 
 # %%

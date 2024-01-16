@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeVar, cast, get_args
+from typing import Any, TypeVar, cast, get_args, overload
 
 from transformers import (
     AutoModelForCausalLM,
@@ -11,39 +10,26 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
-from repeng.hooks.points import Point, TupleTensorExtractor
+from repeng.models import points
+from repeng.models.types import Gpt2Id, Llama2Id, Llm, LlmId, PythiaId
 
 _ModelT = TypeVar("_ModelT", bound=PreTrainedModel)
 _TokenizerT = TypeVar("_TokenizerT", bound=PreTrainedTokenizerFast)
 
 
-PythiaId = Literal[
-    "pythia-70m",
-    "pythia-160m",
-    "pythia-410m",
-    "pythia-1b",
-    "pythia-1.4b",
-    "pythia-2.8b",
-    "pythia-6.9b",
-    "pythia-12b",
-]
-Gpt2Id = Literal["gpt2"]
-Llama2Id = Literal[
-    "Llama-2-7b-hf",
-    "Llama-2-13b-hf",
-    "Llama-2-70b-hf",
-    "Llama-2-7b-chat-hf",
-    "Llama-2-13b-chat-hf",
-    "Llama-2-70b-chat-hf",
-]
-LlmId = PythiaId | Gpt2Id | Llama2Id
+@overload
+def get_llm(llm_id: PythiaId) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
+    ...
 
 
-@dataclass
-class Llm(Generic[_ModelT, _TokenizerT]):
-    model: _ModelT
-    tokenizer: _TokenizerT
-    points: list[Point[_ModelT]]
+@overload
+def get_llm(llm_id: Gpt2Id) -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
+    ...
+
+
+@overload
+def get_llm(llm_id: Llama2Id) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
+    ...
 
 
 def get_llm(llm_id: LlmId) -> Llm[Any, Any]:
@@ -64,14 +50,7 @@ def gpt2() -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
     return Llm(
         model,
         tokenizer,
-        [
-            Point(
-                f"h{i}",
-                lambda model: model.transformer.h[i],
-                tensor_extractor=TupleTensorExtractor(0),
-            )
-            for i in range(11)
-        ],
+        points.gpt2(),
     )
 
 
@@ -91,14 +70,7 @@ def pythia(
     return Llm(
         model,
         tokenizer,
-        [
-            Point(
-                f"h{i}",
-                lambda model: model.gpt_neox.layers[i],
-                tensor_extractor=TupleTensorExtractor(0),
-            )
-            for i in range(len(model.gpt_neox.layers))
-        ],
+        points.pythia(pythia_id),
     )
 
 
@@ -112,12 +84,5 @@ def llama2(
     return Llm(
         model,
         tokenizer,
-        [
-            Point(
-                f"h{i}",
-                lambda model: model.model.layers[i],
-                tensor_extractor=TupleTensorExtractor(0),
-            )
-            for i in range(len(model.model.layers))
-        ],
+        points.llama2(llama_id),
     )

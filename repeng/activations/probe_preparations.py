@@ -58,8 +58,6 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
         activations_1=np.stack(df_paired[True].to_list()),
         activations_2=np.stack(df_paired[False].to_list()),
     )
-    print(paired_activations.activations_1[0, :10])
-    print(paired_activations.activations_2[0, :10])
 
     return ProbeArrays(
         activations=activation_array,
