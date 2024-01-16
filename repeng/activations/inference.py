@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from transformers import PreTrainedModel, PreTrainedTokenizerFast
 
 from repeng.hooks.grab import grab_many
-from repeng.hooks.points import Point
+from repeng.models.llms import Llm
 
 ModelT = TypeVar("ModelT", bound=PreTrainedModel)
 
@@ -23,18 +23,16 @@ class ActivationRow(BaseModel, extra="forbid"):
 
 @torch.inference_mode()
 def get_model_activations(
-    model: ModelT,
-    tokenizer: PreTrainedTokenizerFast,
-    points: list[Point[ModelT]],
+    llm: Llm[ModelT, PreTrainedTokenizerFast],
     text: str,
 ) -> ActivationRow:
-    tokens = tokenizer.encode(text)
-    tokens_str = tokenizer.tokenize(text)
-    tokens = tokenizer.convert_tokens_to_ids(tokens_str)
-    tokens = torch.tensor([tokens], device=next(model.parameters()).device)
+    tokens = llm.tokenizer.encode(text)
+    tokens_str = llm.tokenizer.tokenize(text)
+    tokens = llm.tokenizer.convert_tokens_to_ids(tokens_str)
+    tokens = torch.tensor([tokens], device=next(llm.model.parameters()).device)
 
-    with grab_many(model, points) as activation_fn:
-        output = model.forward(tokens)
+    with grab_many(llm.model, llm.points) as activation_fn:
+        output = llm.model.forward(tokens)
         logits: torch.Tensor = output.logits
         layer_activations = activation_fn()
 

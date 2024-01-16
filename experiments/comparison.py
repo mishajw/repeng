@@ -15,7 +15,8 @@ from repeng.datasets.collections import PAIRED_DATASET_IDS, get_datasets
 from repeng.datasets.filters import limit_dataset_and_split_fn
 from repeng.datasets.types import BinaryRow
 from repeng.evals.probes import evaluate_probe
-from repeng.models import llms
+from repeng.models.llms import LlmId
+from repeng.models.loading import load_llm_oioo
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
 from repeng.probes.linear_artificial_tomography import (
@@ -27,16 +28,32 @@ from repeng.probes.mean_mass_probe import train_mmp_probe
 assert load_dotenv()
 
 # %%
-llm = llms.gpt2()
+llm_ids: list[LlmId] = ["gpt2", "pythia-70m"]
+
 
 # %%
-inputs = mppr.init(
-    "init",
-    Path("../output/comparison"),
-    init_fn=lambda: get_datasets(PAIRED_DATASET_IDS),
-    to=BinaryRow,
-).filter(
-    limit_dataset_and_split_fn(100),
+class BinaryRowWithLlm(BinaryRow):
+    llm_id: LlmId
+
+
+inputs = (
+    mppr.init(
+        "init",
+        Path("../output/comparison"),
+        init_fn=lambda: get_datasets(PAIRED_DATASET_IDS),
+        to=BinaryRow,
+    )
+    .filter(
+        limit_dataset_and_split_fn(100),
+    )
+    .flat_map(
+        lambda key, row: {
+            f"{key}-{llm_id}": BinaryRowWithLlm(**row.model_dump(), llm_id=llm_id)
+            for llm_id in llm_ids
+        }
+    )
+    # avoids constantly reloading models with OIOO
+    .sort(lambda _, row: row.llm_id)
 )
 print(len(inputs.get()))
 
@@ -51,9 +68,7 @@ activations_and_inputs = (
     inputs.map(
         "activations",
         fn=lambda _, value: get_model_activations(
-            llm.model,
-            llm.tokenizer,
-            llm.points,
+            load_llm_oioo(value.llm_id),
             value.text,
         ),
         to="pickle",
@@ -64,7 +79,7 @@ activations_and_inputs = (
             dataset_id=input.dataset_id,
             split=input.split,
             label=input.is_true,
-            activations=activations.activations[llm.points[-1].name],
+            activations=activations.activations["TODO"],
             pair_id=input.pair_id,
         ),
     )

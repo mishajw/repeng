@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar, cast, get_args
 
 from transformers import (
     AutoModelForCausalLM,
@@ -17,11 +17,44 @@ _ModelT = TypeVar("_ModelT", bound=PreTrainedModel)
 _TokenizerT = TypeVar("_TokenizerT", bound=PreTrainedTokenizerFast)
 
 
+PythiaId = Literal[
+    "pythia-70m",
+    "pythia-160m",
+    "pythia-410m",
+    "pythia-1b",
+    "pythia-1.4b",
+    "pythia-2.8b",
+    "pythia-6.9b",
+    "pythia-12b",
+]
+Gpt2Id = Literal["gpt2"]
+Llama2Id = Literal[
+    "Llama-2-7b-hf",
+    "Llama-2-13b-hf",
+    "Llama-2-70b-hf",
+    "Llama-2-7b-chat-hf",
+    "Llama-2-13b-chat-hf",
+    "Llama-2-70b-chat-hf",
+]
+LlmId = PythiaId | Gpt2Id | Llama2Id
+
+
 @dataclass
 class Llm(Generic[_ModelT, _TokenizerT]):
     model: _ModelT
     tokenizer: _TokenizerT
     points: list[Point[_ModelT]]
+
+
+def get_llm(llm_id: LlmId) -> Llm[Any, Any]:
+    if llm_id in get_args(PythiaId):
+        return pythia(cast(PythiaId, llm_id))
+    elif llm_id in get_args(Gpt2Id):
+        return gpt2()
+    elif llm_id in get_args(Llama2Id):
+        return llama2(cast(Llama2Id, llm_id))
+    else:
+        raise ValueError(f"Unknown LLM ID: {llm_id}")
 
 
 def gpt2() -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
@@ -43,15 +76,15 @@ def gpt2() -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
 
 
 def pythia(
-    size: Literal["70m", "160m", "410m", "1b", "1.4b", "2.8b", "6.9b", "12b"]
+    pythia_id: PythiaId,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     model = GPTNeoXForCausalLM.from_pretrained(
-        f"EleutherAI/pythia-{size}",
+        f"EleutherAI/{pythia_id}",
         revision="step3000",
     )
     assert isinstance(model, GPTNeoXForCausalLM)
     tokenizer = AutoTokenizer.from_pretrained(
-        f"EleutherAI/pythia-{size}",
+        f"EleutherAI/{pythia_id}",
         revision="step3000",
     )
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
@@ -70,17 +103,11 @@ def pythia(
 
 
 def llama2(
-    size: Literal["7b", "13b", "70b"],
-    *,
-    chat: bool,
+    llama_id: Llama2Id,
 ) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
-    if chat:
-        model_str = f"meta-llama/Llama-2-{size}-chat-hf"
-    else:
-        model_str = f"meta-llama/Llama-2-{size}-hf"
-    model = AutoModelForCausalLM.from_pretrained(model_str)
+    model = AutoModelForCausalLM.from_pretrained(f"meta-llama/{llama_id}")
     assert isinstance(model, LlamaForCausalLM)
-    tokenizer = AutoTokenizer.from_pretrained(model_str)
+    tokenizer = AutoTokenizer.from_pretrained(f"meta-llama/{llama_id}")
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
     return Llm(
         model,
