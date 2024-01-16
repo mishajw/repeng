@@ -27,7 +27,7 @@ from repeng.probes.mean_mass_probe import train_mmp_probe
 assert load_dotenv()
 
 # %%
-model, tokenizer, points = models.gpt2()
+llm = models.gpt2()
 
 # %%
 inputs = mppr.init(
@@ -51,9 +51,9 @@ activations_and_inputs = (
     inputs.map(
         "activations",
         fn=lambda _, value: get_model_activations(
-            model,
-            tokenizer,
-            points,
+            llm.model,
+            llm.tokenizer,
+            llm.points,
             value.text,
         ),
         to="pickle",
@@ -64,7 +64,7 @@ activations_and_inputs = (
             dataset_id=input.dataset_id,
             split=input.split,
             label=input.is_true,
-            activations=activations.activations[points[-1].name],
+            activations=activations.activations[llm.points[-1].name],
             pair_id=input.pair_id,
         ),
     )

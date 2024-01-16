@@ -1,4 +1,5 @@
-from typing import Literal
+from dataclasses import dataclass
+from typing import Generic, Literal, TypeVar
 
 from transformers import (
     AutoModelForCausalLM,
@@ -6,19 +7,28 @@ from transformers import (
     GPT2LMHeadModel,
     GPTNeoXForCausalLM,
     LlamaForCausalLM,
+    PreTrainedModel,
     PreTrainedTokenizerFast,
 )
 
 from repeng.hooks.points import Point, TupleTensorExtractor
 
+_ModelT = TypeVar("_ModelT", bound=PreTrainedModel)
+_TokenizerT = TypeVar("_TokenizerT", bound=PreTrainedTokenizerFast)
 
-def gpt2() -> (
-    tuple[GPT2LMHeadModel, PreTrainedTokenizerFast, list[Point[GPT2LMHeadModel]]]
-):
+
+@dataclass
+class Llm(Generic[_ModelT, _TokenizerT]):
+    model: _ModelT
+    tokenizer: _TokenizerT
+    points: list[Point[_ModelT]]
+
+
+def gpt2() -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
     model = AutoModelForCausalLM.from_pretrained("gpt2")
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
-    return (
+    return Llm(
         model,
         tokenizer,
         [
@@ -34,9 +44,7 @@ def gpt2() -> (
 
 def pythia(
     size: Literal["70m", "160m", "410m", "1b", "1.4b", "2.8b", "6.9b", "12b"]
-) -> tuple[
-    GPTNeoXForCausalLM, PreTrainedTokenizerFast, list[Point[GPTNeoXForCausalLM]]
-]:
+) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     model = GPTNeoXForCausalLM.from_pretrained(
         f"EleutherAI/pythia-{size}",
         revision="step3000",
@@ -47,7 +55,7 @@ def pythia(
         revision="step3000",
     )
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
-    return (
+    return Llm(
         model,
         tokenizer,
         [
@@ -65,7 +73,7 @@ def llama2_13b(
     size: Literal["7b", "13b", "70b"],
     *,
     chat: bool,
-) -> tuple[LlamaForCausalLM, PreTrainedTokenizerFast, list[Point[LlamaForCausalLM]]]:
+) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
     if chat:
         model_str = f"meta-llama/Llama-2-{size}-chat-hf"
     else:
@@ -74,7 +82,7 @@ def llama2_13b(
     assert isinstance(model, LlamaForCausalLM)
     tokenizer = AutoTokenizer.from_pretrained(model_str)
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
-    return (
+    return Llm(
         model,
         tokenizer,
         [
