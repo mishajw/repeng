@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import numpy as np
+from dotenv import load_dotenv
 from mppr import mppr
 
 from repeng import models
@@ -16,6 +17,8 @@ from repeng.probes.linear_artificial_tomography import (
 )
 from repeng.probes.mean_mass_probe import train_mmp_probe
 from repeng.probes.types import Activations, LabeledActivations, PairedActivations
+
+assert load_dotenv()
 
 # %%
 model, tokenizer, points = models.gpt2()
@@ -53,6 +56,7 @@ df = (
             pair_id=input.pair_id,
         ),
     )
+    .upload("s3://repeng/comparison/activations/gpt2", to="pickle")
     .to_dataframe(lambda d: d)
 )
 df
