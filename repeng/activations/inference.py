@@ -22,7 +22,7 @@ class ActivationRow(BaseModel, extra="forbid"):
 
 
 @torch.inference_mode()
-def get_activations(
+def get_model_activations(
     model: ModelT,
     tokenizer: PreTrainedTokenizerFast,
     points: list[Point[ModelT]],
