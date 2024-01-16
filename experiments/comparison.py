@@ -99,7 +99,10 @@ pd.DataFrame(
     [
         dict(
             name=name,
-            **evaluate_probe(probe, probe_arrays.labeled).model_dump(),
+            **evaluate_probe(
+                probe,
+                probe_arrays_validation.labeled,
+            ).model_dump(),
         )
         for name, probe in probes.items()
     ]
