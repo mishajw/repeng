@@ -18,6 +18,7 @@ openai = "^1.7.2"
 python-dotenv = "^1.0.0"
 jsonlines = "^4.0.0"
 jaxtyping = "^0.2.25"
+fire = "^0.5.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.28.0"

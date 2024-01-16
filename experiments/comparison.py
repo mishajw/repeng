@@ -1,23 +1,17 @@
 # %%
-from pathlib import Path
+
+from typing import cast
 
 import pandas as pd
 from dotenv import load_dotenv
-from mppr import mppr
-from pydantic import BaseModel
 
-from repeng.activations.inference import ActivationRow, get_model_activations
 from repeng.activations.probe_preparations import (
     Activation,
     prepare_activations_for_probes,
 )
-from repeng.datasets.collections import PAIRED_DATASET_IDS, get_datasets
-from repeng.datasets.filters import limit_dataset_and_split_fn
-from repeng.datasets.types import BinaryRow, Split
+from repeng.datasets.activations.types import ActivationResultRow
 from repeng.evals.probes import evaluate_probe
 from repeng.models.llms import LlmId
-from repeng.models.loading import load_llm_oioo
-from repeng.models.points import get_points
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
 from repeng.probes.linear_artificial_tomography import (
@@ -25,76 +19,15 @@ from repeng.probes.linear_artificial_tomography import (
     train_lat_probe,
 )
 from repeng.probes.mean_mass_probe import train_mmp_probe
-from repeng.utils.pydantic_ndarray import NdArray
 
 assert load_dotenv()
 
 # %%
 llm_ids: list[LlmId] = ["gpt2", "pythia-70m"]
 
-
 # %%
-class BinaryRowWithLlm(BinaryRow):
-    llm_id: LlmId
-
-
-inputs = (
-    mppr.init(
-        "init",
-        Path("../output/comparison"),
-        init_fn=lambda: get_datasets(PAIRED_DATASET_IDS),
-        to=BinaryRow,
-    )
-    .filter(
-        limit_dataset_and_split_fn(100),
-    )
-    .flat_map(
-        lambda key, row: {
-            f"{key}-{llm_id}": BinaryRowWithLlm(**row.model_dump(), llm_id=llm_id)
-            for llm_id in llm_ids
-        }
-    )
-    # avoids constantly reloading models with OIOO
-    .sort(lambda _, row: row.llm_id)
-)
-print(len(inputs.get()))
-
-
-# %%
-class ActivationResultRow(BaseModel, extra="forbid"):
-    dataset_id: str
-    pair_id: str | None
-    activations: NdArray  # (n, d)
-    label: bool
-    split: Split
-    llm_id: LlmId
-
-    class Config:
-        arbitrary_types_allowed = True
-
-
-activations_and_inputs = (
-    inputs.map(
-        "activations",
-        fn=lambda _, value: get_model_activations(
-            load_llm_oioo(value.llm_id),
-            value.text,
-        ),
-        to=ActivationRow,
-    )
-    .join(
-        inputs,
-        lambda _, activations, input: ActivationResultRow(
-            dataset_id=input.dataset_id,
-            split=input.split,
-            label=input.is_true,
-            activations=activations.activations[get_points(input.llm_id)[-1].name],
-            pair_id=input.pair_id,
-            llm_id=input.llm_id,
-        ),
-    )
-    .upload("s3://repeng/comparison/activations.jsonl", to=ActivationResultRow)
-)
+# TODO
+activations_dataset: list[ActivationResultRow] = cast(list[ActivationResultRow], None)
 
 # %%
 probe_arrays = prepare_activations_for_probes(
@@ -105,9 +38,8 @@ probe_arrays = prepare_activations_for_probes(
             activations=row.activations,
             label=row.label,
         )
-        for row in activations_and_inputs.filter(
-            lambda _, row: row.split == "train" and row.llm_id == "gpt2"
-        ).get()
+        for row in activations_dataset
+        if row.split == "train" and row.llm_id == "pythia-70m"
     ]
 )
 probe_arrays_validation = prepare_activations_for_probes(
@@ -118,9 +50,8 @@ probe_arrays_validation = prepare_activations_for_probes(
             activations=row.activations,
             label=row.label,
         )
-        for row in activations_and_inputs.filter(
-            lambda _, row: row.split == "validation" and row.llm_id == "gpt2"
-        ).get()
+        for row in activations_dataset
+        if row.split == "validation" and row.llm_id == "pythia-70m"
     ]
 )
 
