@@ -2067,7 +2067,7 @@ tqdm = "^4.66.1"
 type = "git"
 url = "https://github.com/mishajw/mppr.git"
 reference = "main"
-resolved_reference = "f80fbc3ad21cde2e0e670f3c7cd16ecc8c15cb01"
+resolved_reference = "e46df0ad6e1284d0642d61207ac9f238e43efc74"
 
 [[package]]
 name = "multidict"
