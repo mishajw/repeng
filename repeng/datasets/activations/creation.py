@@ -6,7 +6,7 @@ from mppr import mppr
 
 from repeng.activations.inference import ActivationRow, get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.collections import PAIRED_DATASET_IDS, get_datasets
+from repeng.datasets.collections import ALL_DATASET_IDS, get_datasets
 from repeng.datasets.filters import limit_dataset_and_split_fn
 from repeng.datasets.types import BinaryRow
 from repeng.models.llms import LlmId
@@ -30,7 +30,7 @@ def create_activations_dataset(
         mppr.init(
             "init",
             Path("../output/comparison"),
-            init_fn=lambda: get_datasets(PAIRED_DATASET_IDS),
+            init_fn=lambda: get_datasets(ALL_DATASET_IDS),
             to=BinaryRow,
         )
         .filter(
