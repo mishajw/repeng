@@ -11,8 +11,8 @@ from repeng.datasets.truthful_qa import get_truthful_qa
 from repeng.datasets.types import BinaryRow, DatasetId
 
 ALL_DATASET_IDS: list[DatasetId] = [
-    "arc_challenge",
-    "arc_easy",
+    # From Geometry of Truth paper.
+    # https://arxiv.org/abs/2310.06824
     "geometry_of_truth-cities",
     "geometry_of_truth-neg_cities",
     "geometry_of_truth-sp_en_trans",
@@ -21,12 +21,22 @@ ALL_DATASET_IDS: list[DatasetId] = [
     "geometry_of_truth-smaller_than",
     "geometry_of_truth-cities_cities_conj",
     "geometry_of_truth-cities_cities_disj",
-    "common_sense_qa",
+    # From Representation Engineering paper, extracting "truth".
+    # https://arxiv.org/abs/2310.01405
     "open_book_qa",
+    "common_sense_qa",
     "race",
-    "truthful_qa",
-    "truthful_model_written",
+    "arc_challenge",
+    "arc_easy",
+    # From Representation Engineering paper, extracting "honesty".
+    # https://arxiv.org/abs/2310.01405
     "true_false",
+    # From Representation Engineering paper, for evaluations.
+    # https://arxiv.org/abs/2310.01405
+    "truthful_qa",
+    # Custom dataset mirroring CCA paper.
+    # https://arxiv.org/abs/2312.06681
+    "truthful_model_written",
 ]
 
 PAIRED_DATASET_IDS: list[DatasetId] = [
