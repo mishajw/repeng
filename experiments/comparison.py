@@ -14,7 +14,6 @@ from repeng.activations.probe_preparations import (
     ProbeArrays,
     prepare_activations_for_probes,
 )
-from repeng.datasets.activations.types import ActivationResultRow
 from repeng.datasets.collections import (
     DatasetCollectionId,
     get_dataset_ids_for_collection,
@@ -22,6 +21,7 @@ from repeng.datasets.collections import (
 from repeng.datasets.types import DatasetId, Split
 from repeng.evals.probes import ProbeEvalResult, evaluate_probe
 from repeng.models.llms import LlmId
+from repeng.models.points import get_points
 from repeng.probes.base import BaseProbe
 from repeng.probes.collections import ProbeId, train_probe
 
@@ -31,9 +31,8 @@ assert load_dotenv()
 mcontext = MContext(Path("../output/comparison"))
 activations_dataset = mcontext.download_cached(
     "activations_dataset",
-    # path="s3://repeng/datasets/activations/pythia_2024-01-17_v2.jsonl",
-    path="s3://repeng/datasets/activations/test-v4.jsonl",
-    to=ActivationResultRow,
+    path="s3://repeng/datasets/activations/pythia_2024-01-17_v3.pickle",
+    to="pickle",
 ).get()
 print(set(row.llm_id for row in activations_dataset))
 print(set(row.dataset_id for row in activations_dataset))
@@ -49,14 +48,23 @@ class ProbeTrainSpec:
     point_name: str
 
 
-llm_ids: list[tuple[LlmId, list[str]]] = [
-    ("pythia-70m", []),
-    ("pythia-160m", []),
-    ("pythia-410m", []),
-    ("pythia-1b", []),
-    ("pythia-1.4b", []),
-    ("pythia-2.8b", []),
-    ("pythia-6.9b", []),
+def get_evenly_spaced_points(llm_id: LlmId) -> list[str]:
+    points = get_points(llm_id)
+    percentiles = [0.25, 0.5, 0.7, 0.8, 0.9, 1]
+    indices = [int((len(points) - 1) * percentile) for percentile in percentiles]
+    indices = sorted(list(set(indices)))
+    return [points[index].name for index in indices]
+
+
+# %%
+llm_ids: list[LlmId] = [
+    "pythia-70m",
+    "pythia-160m",
+    "pythia-410m",
+    "pythia-1b",
+    "pythia-1.4b",
+    "pythia-2.8b",
+    "pythia-6.9b",
 ]
 dataset_collection_ids: list[DatasetCollectionId] = [
     "all",
@@ -70,18 +78,18 @@ probe_ids: list[ProbeId] = [
 ]
 probe_eval_specs = mcontext.create(
     {
-        f"{llm_id}-{dataset_collection_id}-{probe_id}": ProbeTrainSpec(
+        f"{llm_id}-{dataset_collection_id}-{probe_id}-{point_name}": ProbeTrainSpec(
             llm_id=llm_id,
             dataset_collection_id=dataset_collection_id,
             probe_id=probe_id,
             point_name=point_name,
         )
-        for (llm_id, point_names), dataset_collection_id, probe_id in itertools.product(
+        for llm_id, dataset_collection_id, probe_id in itertools.product(
             llm_ids,
             dataset_collection_ids,
             probe_ids,
         )
-        for point_name in point_names
+        for point_name in get_evenly_spaced_points(llm_id)
     }
 )
 
@@ -173,22 +181,31 @@ df = probe_evaluations.join(
     ),
 ).to_dataframe(lambda d: d)
 df["llm_id"] = pd.Categorical(df["llm_id"], llm_ids)
+df["point_name"] = pd.Categorical(
+    df["point_name"],
+    sorted(df["point_name"].unique().tolist(), key=lambda n: int(n.lstrip("h"))),
+)
 df = df.sort_values("llm_id")
 df  # type: ignore
+df.groupby(["point_name", "llm_id"]).size()
 
 # %%
+df_subset = df.copy()
+# df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
+df_subset = df_subset[df_subset["probe_id"] == "lat"]
+df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry-of-truth"]
+sns.lineplot(data=df_subset, x="point_name", y="f1_score", hue="llm_id", errorbar=None)
+plt.xticks(rotation=90)
+plt.show()
+
+# %%
+df_subset = df.copy()
+df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
+df_subset = df_subset[df_subset["point_name"] == "h21"]
+df_subset = df_subset[df_subset["probe_id"] == "lat"]
+# df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry-of-truth"]
 sns.barplot(
-    data=df[
-        (df["eval_dataset_id"] == "arc_easy") & (df["dataset_collection_id"] == "all")
-    ].reset_index(),
-    x="llm_id",
-    y="f1_score",
-    hue="probe_id",
+    data=df_subset, x="eval_dataset_id", y="f1_score", hue="dataset_collection_id"
 )
 plt.xticks(rotation=90)
-
-# %%
-df[
-    (df["eval_dataset_id"] == "arc_easy")
-    & (df["dataset_collection_id"] == "geometry-of-truth")
-]
+plt.show()
