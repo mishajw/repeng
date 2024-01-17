@@ -202,7 +202,7 @@ plt.show()
 df_subset = df.copy()
 df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
 df_subset = df_subset[df_subset["point_name"] == "h21"]
-df_subset = df_subset[df_subset["probe_id"] == "lat"]
+df_subset = df_subset[df_subset["probe_id"] == "mmp"]
 # df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry-of-truth"]
 sns.barplot(
     data=df_subset, x="eval_dataset_id", y="f1_score", hue="dataset_collection_id"
