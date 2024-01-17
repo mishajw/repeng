@@ -5,7 +5,7 @@ from repeng.activations.probe_preparations import LabeledActivationArray
 from repeng.probes.base import BaseProbe
 
 
-class EvaluationResults(BaseModel, extra="forbid"):
+class ProbeEvalResult(BaseModel, extra="forbid"):
     f1_score: float
     precision: float
     recall: float
@@ -13,7 +13,7 @@ class EvaluationResults(BaseModel, extra="forbid"):
 
 def evaluate_probe(
     probe: BaseProbe, activations: LabeledActivationArray
-) -> EvaluationResults:
+) -> ProbeEvalResult:
     predictions = probe.predict(activations.activations)
     labels = activations.labels
     if (predictions == labels).mean() < 0.5:
@@ -26,4 +26,4 @@ def evaluate_probe(
         and isinstance(precision, float)
         and isinstance(recall, float)
     )
-    return EvaluationResults(f1_score=f1_score, precision=precision, recall=recall)
+    return ProbeEvalResult(f1_score=f1_score, precision=precision, recall=recall)

@@ -1,14 +1,14 @@
 from pydantic import BaseModel
 
-from repeng.datasets.types import Split
+from repeng.datasets.types import DatasetId, Split
 from repeng.models.llms import LlmId
 from repeng.utils.pydantic_ndarray import NdArray
 
 
 class ActivationResultRow(BaseModel, extra="forbid"):
-    dataset_id: str
+    dataset_id: DatasetId
     pair_id: str | None
-    activations: NdArray  # (n, d)
+    activations: dict[str, NdArray]  # (n, d)
     label: bool
     split: Split
     llm_id: LlmId
