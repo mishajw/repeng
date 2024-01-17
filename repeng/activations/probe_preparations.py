@@ -54,10 +54,16 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
     df_paired = df_paired.reset_index()
     df_paired = df_paired.pivot(index="pair_id", columns="label", values="activations")
     df_paired = df_paired.dropna()
-    paired_activations = PairedActivationArray(
-        activations_1=np.stack(df_paired[True].to_list()),
-        activations_2=np.stack(df_paired[False].to_list()),
-    )
+    if True not in df_paired.columns or False not in df_paired.columns:
+        paired_activations = PairedActivationArray(
+            activations_1=np.zeros((0, 0)),
+            activations_2=np.zeros((0, 0)),
+        )
+    else:
+        paired_activations = PairedActivationArray(
+            activations_1=np.stack(df_paired[True].to_list()),
+            activations_2=np.stack(df_paired[False].to_list()),
+        )
 
     return ProbeArrays(
         activations=activation_array,
