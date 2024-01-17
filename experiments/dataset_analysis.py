@@ -16,7 +16,7 @@ df = pd.DataFrame(
 df["word_counts"] = df["text"].apply(
     lambda row: len(row.split()),  # type: ignore
 )
-df
+df  # type: ignore
 
 # %%
 df.groupby(["dataset_id", "split"]).size().reset_index()
@@ -32,12 +32,20 @@ ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.title("Num rows by dataset")
 plt.show()
 
-ax = sns.barplot(df.groupby("dataset_id")["word_counts"].mean())
+ax = sns.barplot(
+    df.groupby("dataset_id")["word_counts"].mean().reset_index(),
+    x="dataset_id",
+    y="word_counts",
+)
 plt.title("Average number of words per prompt by dataset")
 ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.show()
 
-ax = sns.barplot(df.groupby("dataset_id")["is_true"].mean())
+ax = sns.barplot(
+    df.groupby("dataset_id")["is_true"].mean().reset_index(),
+    x="dataset_id",
+    y="is_true",
+)
 plt.title("Percent of true prompts by dataset")
 ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
 plt.show()

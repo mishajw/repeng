@@ -1,5 +1,6 @@
 import io
 import zipfile
+from typing import cast
 
 import pandas as pd
 import requests
@@ -22,7 +23,7 @@ def get_true_false_dataset() -> dict[str, BinaryRow]:
                 dataset_id=_DATASET_ID,
                 # Allocate 20% of the dataset to validation.
                 split="train" if index % 5 != 0 else "validation",
-                text=row["statement"],
+                text=cast(str, row["statement"]),
                 is_true=row["label"] == 1,
                 format_args=dict(),
                 format_style="misc",

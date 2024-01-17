@@ -123,7 +123,7 @@ def filter_low_likelihood(_: str, value: TruthfulModelWrittenEvalRow) -> bool:
         return value.likelihood < 0.5
 
 
-df = await create_df()  # noqa: F704
+df = await create_df()  # type: ignore # noqa: F704
 
 #  %%
 fig, axs = plt.subplots(ncols=3, figsize=(3 * 5, 5))
@@ -144,10 +144,10 @@ print(df["statement_normalized"].value_counts().tail(10))
 print(df["honest"].value_counts())
 
 # %%
-df[df["honest"]].sort_values(by="likelihood", ascending=True).head(10)
+df[df["honest"]].sort_values(by="likelihood", ascending=True).head(10)  # type: ignore
 
 # %%
-df[~df["honest"]].sort_values(by="likelihood", ascending=False).head(10)
+df[~df["honest"]].sort_values(by="likelihood", ascending=False).head(10)  # type: ignore
 
 # %%
 # # gpt-4-1106-preview

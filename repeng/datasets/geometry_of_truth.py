@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, cast
 
 import pandas as pd
 
@@ -38,7 +38,7 @@ def get_geometry_of_truth(subset: Subset) -> dict[str, BinaryRow]:
             dataset_id=dataset_id,
             # Allocate 20% of the dataset to validation.
             split="train" if index % 5 != 0 else "validation",
-            text=row["statement"],
+            text=cast(str, row["statement"]),
             is_true=row["label"] == 1,
             format_args=dict(),
             format_style="misc",
