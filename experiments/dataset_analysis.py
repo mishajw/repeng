@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from repeng.datasets.collections import ALL_DATASET_IDS, get_datasets
+from repeng.datasets.collections import get_dataset_collection
 
 # %%
-datasets = get_datasets(ALL_DATASET_IDS)
+datasets = get_dataset_collection("all")
 
 # %%
 df = pd.DataFrame(

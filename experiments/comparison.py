@@ -91,13 +91,14 @@ def prepare_probe_arrays(
     llm_id: LlmId,
     dataset_ids: list[DatasetId],
     split: Split,
+    point_name: str,
 ) -> ProbeArrays:
     return prepare_activations_for_probes(
         [
             Activation(
                 dataset_id=row.dataset_id,
                 pair_id=row.pair_id,
-                activations=row.activations,
+                activations=row.activations[point_name],
                 label=row.label,
             )
             for row in activations_dataset
@@ -116,6 +117,7 @@ probes = probe_eval_specs.map_cached(
             spec.llm_id,
             get_dataset_ids_for_collection(spec.dataset_collection_id),
             split="train",
+            point_name=spec.point_name,
         ),
     ),
     to="pickle",
@@ -155,6 +157,7 @@ probe_evaluations = probe_eval_specs.map_cached(
             eval_spec.train_spec.llm_id,
             [eval_spec.dataset_id],
             split="validation",
+            point_name=eval_spec.train_spec.point_name,
         ).labeled,
     ),
     to=ProbeEvalResult,
@@ -171,13 +174,13 @@ df = probe_evaluations.join(
 ).to_dataframe(lambda d: d)
 df["llm_id"] = pd.Categorical(df["llm_id"], llm_ids)
 df = df.sort_values("llm_id")
-df
+df  # type: ignore
 
 # %%
 sns.barplot(
     data=df[
         (df["eval_dataset_id"] == "arc_easy") & (df["dataset_collection_id"] == "all")
-    ],
+    ].reset_index(),
     x="llm_id",
     y="f1_score",
     hue="probe_id",
