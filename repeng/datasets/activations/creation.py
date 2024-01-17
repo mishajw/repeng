@@ -2,7 +2,7 @@ from pathlib import Path
 
 import torch
 from dotenv import load_dotenv
-from mppr import mppr
+from mppr import MContext
 
 from repeng.activations.inference import ActivationRow, get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
@@ -26,10 +26,10 @@ def create_activations_dataset(
     llm_ids: list[LlmId],
     device: torch.device,
 ) -> list[ActivationResultRow]:
+    mcontext = MContext(Path("../output/comparison"))
     inputs = (
-        mppr.init(
+        mcontext.create_cached(
             "init",
-            Path("../output/comparison"),
             init_fn=lambda: get_datasets(ALL_DATASET_IDS),
             to=BinaryRow,
         )
@@ -46,7 +46,7 @@ def create_activations_dataset(
         .sort(lambda _, row: row.llm_id)
     )
     return (
-        inputs.map(
+        inputs.map_cached(
             "activations",
             fn=lambda _, value: get_model_activations(
                 load_llm_oioo(

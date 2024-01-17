@@ -7,7 +7,7 @@ import openai
 import pandas as pd
 import seaborn as sns
 from dotenv import load_dotenv
-from mppr import mppr
+from mppr import MContext
 from pydantic import BaseModel
 
 from repeng.modelwrittenevals.filtering import (
@@ -43,18 +43,18 @@ class TruthfulModelWrittenEvalRow(BaseModel, extra="forbid"):
 # %%
 load_dotenv("../.env")
 client = openai.AsyncClient()
+mcontext = MContext(Path("../output/truthful_model_written_evals-v2"))
 
 
 # %%
 async def create_df() -> pd.DataFrame:
-    init = mppr.Mappable(
+    init = mcontext.create(
         {
             **{f"honest_{i}": True for i in range(NUM_HONEST_GENERATIONS)},
             **{f"dishonest_{i}": False for i in range(NUM_HONEST_GENERATIONS)},
         },
-        base_dir=Path("../output/truthful_model_written_evals-v2"),
     )
-    statements = await init.amap(
+    statements = await init.amap_cached(
         "generation",
         fn=lambda _, value: generate_statements(
             client,
@@ -74,7 +74,7 @@ async def create_df() -> pd.DataFrame:
     ).filter(
         filter_repeating_statements(),
     )
-    statement_likelihoods = await statements_flat.amap(
+    statement_likelihoods = await statements_flat.amap_cached(
         "filter",
         fn=lambda _, value: get_statement_likelihood(
             client,
