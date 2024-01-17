@@ -17,14 +17,16 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
     with jsonlines.open(str(truthful_json)) as reader:
         results = {}
         for row in reader:
+            key = row["key"]
             for answer in True, False:
                 answer_str = "Yes" if answer else "No"
                 format_args = dict(
                     statement=row["value"]["statement"], answer=answer_str
                 )
                 text = _TEMPLATE.format(**format_args)
-                results[row["key"]] = BinaryRow(
+                results[f"{key}-{answer}"] = BinaryRow(
                     dataset_id=_DATASET_ID,
+                    pair_id=row["key"],
                     split=_get_split(key=row["key"]),
                     text=text,
                     is_true=(row["value"]["honest"] and answer)
