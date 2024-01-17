@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, cast, get_args, overload
+from typing import Any, cast, get_args, overload
 
 from transformers import (
     AutoModelForCausalLM,
@@ -6,15 +6,11 @@ from transformers import (
     GPT2LMHeadModel,
     GPTNeoXForCausalLM,
     LlamaForCausalLM,
-    PreTrainedModel,
     PreTrainedTokenizerFast,
 )
 
 from repeng.models import points
 from repeng.models.types import Gpt2Id, Llama2Id, Llm, LlmId, PythiaId
-
-_ModelT = TypeVar("_ModelT", bound=PreTrainedModel)
-_TokenizerT = TypeVar("_TokenizerT", bound=PreTrainedTokenizerFast)
 
 
 @overload

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import torch
 from dotenv import load_dotenv
 from mppr import mppr
 
@@ -23,6 +24,7 @@ def create_activations_dataset(
     tag: str,
     num_samples_per_dataset: int,
     llm_ids: list[LlmId],
+    device: torch.device,
 ) -> list[ActivationResultRow]:
     inputs = (
         mppr.init(
@@ -47,7 +49,11 @@ def create_activations_dataset(
         inputs.map(
             "activations",
             fn=lambda _, value: get_model_activations(
-                load_llm_oioo(value.llm_id),
+                load_llm_oioo(
+                    value.llm_id,
+                    device=device,
+                    dtype=torch.bfloat16,
+                ),
                 value.text,
             ),
             to=ActivationRow,

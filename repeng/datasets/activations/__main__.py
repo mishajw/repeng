@@ -1,10 +1,11 @@
 import fire
+import torch
 
 from repeng.datasets.activations.creation import create_activations_dataset
 from repeng.models.types import LlmId
 
 
-def main(tag: str, *, num_samples_per_dataset: int):
+def main(tag: str, *, num_samples_per_dataset: int, device: str):
     llm_ids: list[LlmId] = [
         "pythia-70m",
         "pythia-160m",
@@ -13,12 +14,13 @@ def main(tag: str, *, num_samples_per_dataset: int):
         "pythia-1.4b",
         "pythia-2.8b",
         "pythia-6.9b",
-        "pythia-12b",
+        # "pythia-12b",
     ]
     create_activations_dataset(
         tag=tag,
         num_samples_per_dataset=num_samples_per_dataset,
         llm_ids=llm_ids,
+        device=torch.device(device),
     )
 
 
