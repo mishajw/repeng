@@ -2,6 +2,7 @@ from typing import Literal, cast
 
 import pandas as pd
 
+from repeng.datasets.split_partitions import get_split
 from repeng.datasets.types import BinaryRow, DatasetId
 
 Subset = Literal[
@@ -36,8 +37,7 @@ def get_geometry_of_truth(subset: Subset) -> dict[str, BinaryRow]:
         assert isinstance(index, int)
         result[f"{dataset_id}-{index}"] = BinaryRow(
             dataset_id=dataset_id,
-            # Allocate 20% of the dataset to validation.
-            split="train" if index % 5 != 0 else "validation",
+            split=get_split(dataset_id, str(index)),
             text=cast(str, row["statement"]),
             is_true=row["label"] == 1,
             format_args=dict(),

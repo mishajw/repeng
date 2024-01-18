@@ -5,6 +5,7 @@ from typing import cast
 import pandas as pd
 import requests
 
+from repeng.datasets.split_partitions import get_split
 from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "true_false"
@@ -21,8 +22,7 @@ def get_true_false_dataset() -> dict[str, BinaryRow]:
             assert isinstance(index, int)
             result[f"{csv_name}-{index}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
-                # Allocate 20% of the dataset to validation.
-                split="train" if index % 5 != 0 else "validation",
+                split=get_split(_DATASET_ID, f"{csv_name}-{index}"),
                 text=cast(str, row["statement"]),
                 is_true=row["label"] == 1,
                 format_args=dict(),

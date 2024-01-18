@@ -1,10 +1,10 @@
-import hashlib
 from importlib import resources
 
 import jsonlines
 
 from repeng.datasets import data
-from repeng.datasets.types import BinaryRow, Split
+from repeng.datasets.split_partitions import get_split
+from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "truthful_model_written"
 _TEMPLATE = (
@@ -27,7 +27,7 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
                 results[f"{key}-{answer}"] = BinaryRow(
                     dataset_id=_DATASET_ID,
                     pair_id=row["key"],
-                    split=_get_split(key=row["key"]),
+                    split=get_split(_DATASET_ID, row["key"]),
                     text=text,
                     is_true=(row["value"]["honest"] and answer)
                     or (not row["value"]["honest"] and not answer),
@@ -35,13 +35,3 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
                     format_style="misc",
                 )
     return results
-
-
-def _get_split(*, key: str) -> Split:
-    hash = hashlib.sha256(key.encode("utf-8"))
-    hash = hash.hexdigest()
-    hash = int(hash, 16)
-    if hash % 5 != 0:
-        return "train"
-    else:
-        return "validation"

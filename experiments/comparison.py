@@ -267,6 +267,3 @@ for eval_dataset_id, ax in zip(df_subset["eval_dataset_id"].unique(), axs.flatte
             label=probe_method,
         )
     ax.legend()
-
-# %%
-activations_dataset[4]
