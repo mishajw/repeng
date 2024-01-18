@@ -4,7 +4,7 @@ import torch
 from dotenv import load_dotenv
 from mppr import MContext
 
-from repeng.activations.inference import ActivationRow, get_model_activations
+from repeng.activations.inference import get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
 from repeng.datasets.elk.types import BinaryRow
 from repeng.datasets.elk.utils.collections import get_dataset_collection
@@ -55,7 +55,7 @@ def create_activations_dataset(
                 ),
                 value.text,
             ),
-            to=ActivationRow,
+            to="pickle",
         )
         .join(
             inputs,
