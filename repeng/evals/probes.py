@@ -1,3 +1,5 @@
+import warnings
+
 import sklearn.metrics
 from pydantic import BaseModel
 
@@ -9,21 +11,48 @@ class ProbeEvalResult(BaseModel, extra="forbid"):
     f1_score: float
     precision: float
     recall: float
+    roc_auc_score: float
+    fprs: list[float]
+    tprs: list[float]
 
 
 def evaluate_probe(
     probe: BaseProbe, activations: LabeledActivationArray
 ) -> ProbeEvalResult:
-    predictions = probe.predict(activations.activations)
+    if len(set(activations.labels)) == 1:
+        warnings.warn("Only one class in labels, roc auc score is undefined")
+        return ProbeEvalResult(
+            f1_score=0.0,
+            precision=0.0,
+            recall=0.0,
+            roc_auc_score=0.0,
+            fprs=[],
+            tprs=[],
+        )
+
+    predictions_prob = probe.predict(activations.activations)
+    assert all(0 <= prob <= 1 for prob in predictions_prob)
+    predictions = predictions_prob > 0.5
     labels = activations.labels
-    if (predictions == labels).mean() < 0.5:
-        predictions = ~predictions
+    # TODO:
+    # if (predictions == labels).mean() < 0.5:
+    #     predictions = ~predictions
     f1_score = sklearn.metrics.f1_score(labels, predictions)
     precision = sklearn.metrics.precision_score(labels, predictions)
     recall = sklearn.metrics.recall_score(labels, predictions)
+    roc_auc_score = sklearn.metrics.roc_auc_score(labels, predictions_prob)
+    fpr, tpr, _ = sklearn.metrics.roc_curve(labels, predictions_prob)
     assert (
         isinstance(f1_score, float)
         and isinstance(precision, float)
         and isinstance(recall, float)
+        and isinstance(roc_auc_score, float)
     )
-    return ProbeEvalResult(f1_score=f1_score, precision=precision, recall=recall)
+    return ProbeEvalResult(
+        f1_score=f1_score,
+        precision=precision,
+        recall=recall,
+        roc_auc_score=roc_auc_score,
+        fprs=fpr.tolist(),
+        tprs=tpr.tolist(),
+    )

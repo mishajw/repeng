@@ -6,8 +6,9 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-from jaxtyping import Bool, Float
+from jaxtyping import Float
 from tqdm import tqdm
+from typing_extensions import override
 
 from repeng.activations.probe_preparations import PairedActivationArray
 from repeng.probes.base import BaseProbe
@@ -28,11 +29,12 @@ class CcsProbe(torch.nn.Module, BaseProbe):
         return result
 
     @torch.inference_mode()
+    @override
     def predict(
         self,
         activations: Float[np.ndarray, "n d"],  # noqa: F722
-    ) -> Bool[np.ndarray, "n"]:  # noqa: F821
-        return (self(torch.tensor(activations)) > 0.5).numpy()
+    ) -> Float[np.ndarray, "n"]:  # noqa: F821
+        return self(torch.tensor(activations)).numpy()
 
 
 @dataclass
