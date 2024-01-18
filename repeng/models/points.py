@@ -56,7 +56,7 @@ def gpt2() -> list[Point[GPT2LMHeadModel]]:
     return [
         Point(
             f"h{i}",
-            lambda model: model.transformer.h[i],
+            lambda model, i=i: model.transformer.h[i],
             tensor_extractor=TupleTensorExtractor(0),
         )
         for i in range(_GPT2_NUM_LAYERS)
@@ -67,7 +67,7 @@ def pythia(pythia_id: PythiaId) -> list[Point[GPTNeoXForCausalLM]]:
     return [
         Point(
             f"h{i}",
-            lambda model: model.gpt_neox.layers[i],
+            lambda model, i=i: model.gpt_neox.layers[i],
             tensor_extractor=TupleTensorExtractor(0),
         )
         for i in range(_PYTHIA_NUM_LAYERS[pythia_id])
@@ -78,7 +78,7 @@ def llama2(llama2_id: Llama2Id) -> list[Point[LlamaForCausalLM]]:
     return [
         Point(
             f"h{i}",
-            lambda model: model.model.layers[i],
+            lambda model, i=i: model.model.layers[i],
             tensor_extractor=TupleTensorExtractor(0),
         )
         for i in range(_LLAMA2_NUM_LAYERS[llama2_id])
