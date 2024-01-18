@@ -3,7 +3,7 @@ from typing import Literal, cast
 import pandas as pd
 
 from repeng.datasets.elk.types import BinaryRow, DatasetId
-from repeng.datasets.utils.split_partitions import get_split
+from repeng.datasets.utils.splits import get_split
 
 Subset = Literal[
     "cities",

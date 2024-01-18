@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 
 from repeng.datasets.elk.types import BinaryRow
-from repeng.datasets.utils.split_partitions import get_split
+from repeng.datasets.utils.splits import get_split
 
 _DATASET_ID = "true_false"
 
