@@ -16,6 +16,8 @@ DatasetCollectionId = Literal[
     "all",
     "representation-engineering",
     "geometry-of-truth",
+    "geometry-of-truth-cities",
+    "geometry-of-truth-cities-with-neg",
     "persona",
     "misc",
 ]
@@ -39,6 +41,13 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
         "geometry_of_truth-smaller_than",
         "geometry_of_truth-cities_cities_conj",
         "geometry_of_truth-cities_cities_disj",
+    ],
+    "geometry-of-truth-cities": [
+        "geometry_of_truth-cities",
+    ],
+    "geometry-of-truth-cities-with-neg": [
+        "geometry_of_truth-cities",
+        "geometry_of_truth-neg_cities",
     ],
     "persona": [
         "truthful_model_written",
