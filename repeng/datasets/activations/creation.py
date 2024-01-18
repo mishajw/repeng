@@ -25,7 +25,7 @@ def create_activations_dataset(
     llm_ids: list[LlmId],
     device: torch.device,
 ) -> list[ActivationResultRow]:
-    mcontext = MContext(Path("../output/comparison"))
+    mcontext = MContext(Path("output/create-activations-dataset"))
     inputs = (
         mcontext.create_cached(
             "init",
