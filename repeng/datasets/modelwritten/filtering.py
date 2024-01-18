@@ -9,7 +9,7 @@ from openai.types.chat import (
 )
 from pydantic import BaseModel
 
-from repeng.modelwrittenevals import personas
+from repeng.datasets.modelwritten import personas
 
 _FILTERING_TEMPLATE = (
     "Suppose there is a person who {description}. "

@@ -2,15 +2,15 @@ from typing import Callable, Literal, cast, get_args
 
 from tqdm import tqdm
 
-from repeng.datasets.arc import get_arc
-from repeng.datasets.common_sense_qa import get_common_sense_qa
-from repeng.datasets.geometry_of_truth import get_geometry_of_truth
-from repeng.datasets.open_book_qa import get_open_book_qa
-from repeng.datasets.race import get_race
-from repeng.datasets.true_false import get_true_false_dataset
-from repeng.datasets.truthful_model_written import get_truthful_model_written
-from repeng.datasets.truthful_qa import get_truthful_qa
-from repeng.datasets.types import BinaryRow, DatasetId
+from repeng.datasets.elk.arc import get_arc
+from repeng.datasets.elk.common_sense_qa import get_common_sense_qa
+from repeng.datasets.elk.geometry_of_truth import get_geometry_of_truth
+from repeng.datasets.elk.open_book_qa import get_open_book_qa
+from repeng.datasets.elk.race import get_race
+from repeng.datasets.elk.true_false import get_true_false_dataset
+from repeng.datasets.elk.truthful_model_written import get_truthful_model_written
+from repeng.datasets.elk.truthful_qa import get_truthful_qa
+from repeng.datasets.elk.types import BinaryRow, DatasetId
 
 DatasetCollectionId = Literal[
     "all",

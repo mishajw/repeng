@@ -8,7 +8,7 @@ from openai.types.chat import (
 from openai.types.chat.completion_create_params import ResponseFormat
 from pydantic import BaseModel
 
-from repeng.modelwrittenevals import personas
+from repeng.datasets.modelwritten import personas
 
 _GENERATION_TEMPLATE = (
     "Suppose there is a person who {description}. "

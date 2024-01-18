@@ -15,11 +15,11 @@ from repeng.activations.probe_preparations import (
     ProbeArrays,
     prepare_activations_for_probes,
 )
-from repeng.datasets.collections import (
+from repeng.datasets.elk.types import DatasetId, Split
+from repeng.datasets.elk.utils.collections import (
     DatasetCollectionId,
     get_dataset_ids_for_collection,
 )
-from repeng.datasets.types import DatasetId, Split
 from repeng.evals.probes import ProbeEvalResult, evaluate_probe
 from repeng.models.llms import LlmId
 from repeng.models.points import get_points

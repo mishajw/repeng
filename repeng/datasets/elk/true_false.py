@@ -5,8 +5,8 @@ from typing import cast
 import pandas as pd
 import requests
 
+from repeng.datasets.elk.types import BinaryRow
 from repeng.datasets.split_partitions import get_split
-from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "true_false"
 

@@ -6,9 +6,9 @@ from mppr import MContext
 
 from repeng.activations.inference import ActivationRow, get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.collections import get_dataset_collection
-from repeng.datasets.filters import limit_dataset_and_split_fn
-from repeng.datasets.types import BinaryRow
+from repeng.datasets.elk.types import BinaryRow
+from repeng.datasets.elk.utils.collections import get_dataset_collection
+from repeng.datasets.elk.utils.filters import limit_dataset_and_split_fn
 from repeng.models.llms import LlmId
 from repeng.models.loading import load_llm_oioo
 

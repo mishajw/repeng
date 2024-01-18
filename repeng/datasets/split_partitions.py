@@ -1,6 +1,6 @@
 import hashlib
 
-from repeng.datasets.types import Split
+from repeng.datasets.elk.types import Split
 
 _VALIDATION_SPLIT = 0.2
 

@@ -2,8 +2,8 @@ from typing import Any
 
 import datasets
 
+from repeng.datasets.elk.types import BinaryRow
 from repeng.datasets.split_partitions import get_split
-from repeng.datasets.types import BinaryRow
 
 _DATASET_ID = "truthful_qa"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.1.

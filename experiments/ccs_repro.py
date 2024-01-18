@@ -15,8 +15,8 @@ from sklearn.decomposition import PCA
 
 from repeng.activations import ActivationRow, get_activations
 from repeng.datasets.amazon import create_amazon_rows
+from repeng.datasets.elk.types import InputRow
 from repeng.datasets.probe import train_probe
-from repeng.datasets.types import InputRow
 
 # %%
 torch.cuda.empty_cache()

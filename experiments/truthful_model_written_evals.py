@@ -10,12 +10,12 @@ from dotenv import load_dotenv
 from mppr import MContext
 from pydantic import BaseModel
 
-from repeng.modelwrittenevals.filtering import (
+from repeng.datasets.modelwritten.filtering import (
     FilteringConfig,
     StatementLikelihood,
     get_statement_likelihood,
 )
-from repeng.modelwrittenevals.generation import (
+from repeng.datasets.modelwritten.generation import (
     GenerationConfig,
     Statements,
     generate_statements,

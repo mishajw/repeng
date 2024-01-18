@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 import datasets
 
-from repeng.datasets.types import BinaryRow, DatasetId, Split
+from repeng.datasets.elk.types import BinaryRow, DatasetId, Split
 
 # Taken from https://arxiv.org/abs/2310.01405 D.1.4.
 _TEMPLATE = (

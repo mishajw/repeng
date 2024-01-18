@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from repeng.datasets.types import DatasetId, Split
+from repeng.datasets.elk.types import DatasetId, Split
 from repeng.models.llms import LlmId
 from repeng.utils.pydantic_ndarray import NdArray
 

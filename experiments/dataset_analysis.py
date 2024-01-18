@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from repeng.datasets.collections import get_dataset_collection
+from repeng.datasets.elk.utils.collections import get_dataset_collection
 
 # %%
 datasets = get_dataset_collection("all")

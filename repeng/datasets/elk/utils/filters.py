@@ -2,7 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Callable
 
-from repeng.datasets.types import BinaryRow, DatasetId, Split
+from repeng.datasets.elk.types import BinaryRow, DatasetId, Split
 
 
 @dataclass(frozen=True)

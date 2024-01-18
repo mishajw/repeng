@@ -2,8 +2,8 @@ from typing import Literal, cast
 
 import pandas as pd
 
+from repeng.datasets.elk.types import BinaryRow, DatasetId
 from repeng.datasets.split_partitions import get_split
-from repeng.datasets.types import BinaryRow, DatasetId
 
 Subset = Literal[
     "cities",
