@@ -245,7 +245,7 @@ df_subset = df.copy()
 df_subset = df_subset[df_subset["point_id"] == "p70"]
 df_subset = df_subset.drop(columns=["point_id"])
 df_subset = df_subset[df_subset["llm_id"] == "pythia-2.8b"]
-df_subset = df_subset.drop(columns=["llm_id"])
+df_subset = df_subset.drop(columns=["llm_id"])  # type: ignore
 df_subset["probe_method"] = (
     df_subset["probe_id"] + "+" + df_subset["dataset_collection_id"]
 )
@@ -253,7 +253,7 @@ df_subset = df_subset.drop(columns=["probe_id", "dataset_collection_id"])
 print(df_subset.columns)
 
 fig, axs = plt.subplots(nrows=4, ncols=4, figsize=(4 * 5, 4 * 5))
-df_subset = df_subset.sort_values("eval_dataset_id")
+df_subset = df_subset.sort_values("eval_dataset_id")  # type: ignore
 for eval_dataset_id, ax in zip(df_subset["eval_dataset_id"].unique(), axs.flatten()):
     ax.set_title(eval_dataset_id)
     for probe_method in df_subset["probe_method"].unique():
