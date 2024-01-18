@@ -4,7 +4,7 @@ import jsonlines
 
 from repeng.datasets import data
 from repeng.datasets.elk.types import BinaryRow
-from repeng.datasets.split_partitions import get_split
+from repeng.datasets.utils.split_partitions import get_split
 
 _DATASET_ID = "truthful_model_written"
 _TEMPLATE = (
