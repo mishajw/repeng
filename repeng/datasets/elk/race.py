@@ -3,6 +3,7 @@ from typing import Any
 import datasets
 
 from repeng.datasets.elk.types import BinaryRow, Split
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 
 _DATASET_ID = "race"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.7.
@@ -29,7 +30,7 @@ def get_race() -> dict[str, BinaryRow]:
 def _get_race_split(split: Split) -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("race", "all")
     results = {}
-    for row in dataset[split]:
+    for row in deterministic_shuffle(dataset[split], lambda row: row["example_id"]):
         pair_id = row["example_id"]
         for option_idx, option in enumerate(row["options"]):
             format_args = dict(

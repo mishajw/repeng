@@ -3,6 +3,7 @@ from typing import Any
 import datasets
 
 from repeng.datasets.elk.types import BinaryRow, Split
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 
 _DATASET_ID = "common_sense_qa"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.6.
@@ -25,7 +26,7 @@ def get_common_sense_qa() -> dict[str, BinaryRow]:
 def _get_common_sense_qa_split(split: Split) -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("commonsense_qa")
     results = {}
-    for row in dataset[split]:
+    for row in deterministic_shuffle(dataset[split], lambda row: row["id"]):
         pair_id = row["id"]
         for choice, choice_label in zip(
             row["choices"]["text"], row["choices"]["label"], strict=True

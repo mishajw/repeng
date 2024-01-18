@@ -3,6 +3,7 @@ from typing import Any, Literal
 import datasets
 
 from repeng.datasets.elk.types import BinaryRow, DatasetId, Split
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 
 # Taken from https://arxiv.org/abs/2310.01405 D.1.4.
 _TEMPLATE = (
@@ -31,7 +32,7 @@ def _get_arc_split(
     dataset: Any = datasets.load_dataset("ai2_arc", _SUBSET_TO_NAME[subset])
     dataset_id = _SUBSET_TO_ID[subset]
     results = {}
-    for row in dataset[split]:
+    for row in deterministic_shuffle(dataset[split], lambda row: row["id"]):
         pair_id = row["id"]
         for choice, choice_label in zip(
             row["choices"]["text"], row["choices"]["label"], strict=True

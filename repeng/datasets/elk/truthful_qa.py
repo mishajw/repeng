@@ -3,6 +3,7 @@ from typing import Any
 import datasets
 
 from repeng.datasets.elk.types import BinaryRow
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 from repeng.datasets.utils.splits import get_split
 
 _DATASET_ID = "truthful_qa"
@@ -18,7 +19,9 @@ _TEMPLATE = (
 def get_truthful_qa() -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("truthful_qa", "generation")
     results = {}
-    for pair_id, row in enumerate(dataset["validation"]):
+    for pair_id, row in deterministic_shuffle(
+        enumerate(dataset["validation"]), lambda row: str(row[0])
+    ):
         answers = [
             *[(answer, True) for answer in row["correct_answers"]],
             *[(answer, False) for answer in row["incorrect_answers"]],

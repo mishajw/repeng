@@ -3,6 +3,7 @@ from typing import Literal, cast
 import pandas as pd
 
 from repeng.datasets.elk.types import BinaryRow, DatasetId
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 from repeng.datasets.utils.splits import get_split
 
 Subset = Literal[
@@ -33,7 +34,7 @@ def get_geometry_of_truth(subset: Subset) -> dict[str, BinaryRow]:
     dataset_id = _SUBSET_TO_DATASET_ID[subset]
     result = {}
     df = pd.read_csv(f"{_URL}/{subset}.csv")
-    for index, row in df.iterrows():
+    for index, row in deterministic_shuffle(df.iterrows(), lambda row: str(row[0])):
         assert isinstance(index, int)
         result[f"{dataset_id}-{index}"] = BinaryRow(
             dataset_id=dataset_id,

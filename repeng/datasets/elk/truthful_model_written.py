@@ -4,6 +4,7 @@ import jsonlines
 
 from repeng.datasets import data
 from repeng.datasets.elk.types import BinaryRow
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 from repeng.datasets.utils.splits import get_split
 
 _DATASET_ID = "truthful_model_written"
@@ -16,7 +17,7 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
     truthful_json = resources.files(data) / "truthful.jsonl"
     with jsonlines.open(str(truthful_json)) as reader:
         results = {}
-        for row in reader:
+        for row in deterministic_shuffle(reader, lambda row: row["key"]):
             key = row["key"]
             for answer in True, False:
                 answer_str = "Yes" if answer else "No"

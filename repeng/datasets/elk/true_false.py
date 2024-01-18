@@ -6,6 +6,7 @@ import pandas as pd
 import requests
 
 from repeng.datasets.elk.types import BinaryRow
+from repeng.datasets.utils.shuffles import deterministic_shuffle
 from repeng.datasets.utils.splits import get_split
 
 _DATASET_ID = "true_false"
@@ -17,8 +18,8 @@ _DATASET_ID = "true_false"
 def get_true_false_dataset() -> dict[str, BinaryRow]:
     result = {}
     dfs = _download_dataframes()
-    for csv_name, df in dfs.items():
-        for index, row in df.iterrows():
+    for csv_name, df in deterministic_shuffle(dfs.items(), lambda row: row[0]):
+        for index, row in deterministic_shuffle(df.iterrows(), lambda row: str(row[0])):
             assert isinstance(index, int)
             result[f"{csv_name}-{index}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
