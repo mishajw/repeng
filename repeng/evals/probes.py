@@ -20,7 +20,7 @@ def evaluate_probe(
     probe: BaseProbe, activations: LabeledActivationArray
 ) -> ProbeEvalResult:
     if len(set(activations.labels)) == 1:
-        warnings.warn("Only one class in labels, roc auc score is undefined")
+        warnings.warn("Only one class in labels")
         return ProbeEvalResult(
             f1_score=0.0,
             precision=0.0,
@@ -37,9 +37,9 @@ def evaluate_probe(
     # TODO:
     # if (predictions == labels).mean() < 0.5:
     #     predictions = ~predictions
-    f1_score = sklearn.metrics.f1_score(labels, predictions)
-    precision = sklearn.metrics.precision_score(labels, predictions)
-    recall = sklearn.metrics.recall_score(labels, predictions)
+    f1_score = sklearn.metrics.f1_score(labels, predictions, zero_division=0)
+    precision = sklearn.metrics.precision_score(labels, predictions, zero_division=0)
+    recall = sklearn.metrics.recall_score(labels, predictions, zero_division=0)
     roc_auc_score = sklearn.metrics.roc_auc_score(labels, predictions_prob)
     fpr, tpr, _ = sklearn.metrics.roc_curve(labels, predictions_prob)
     assert (

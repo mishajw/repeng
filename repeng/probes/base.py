@@ -33,4 +33,5 @@ class DotProductProbe(BaseProbe):
 def _sigmoid(
     x: Float[np.ndarray, "n"],  # noqa: F821
 ) -> Float[np.ndarray, "n"]:  # noqa: F821
+    x = np.clip(x, -50, 50)
     return 1 / (1 + np.exp(-x))
