@@ -14,6 +14,7 @@ class ProbeEvalResult(BaseModel, extra="forbid"):
     roc_auc_score: float
     fprs: list[float]
     tprs: list[float]
+    probabilities: list[float]
 
 
 def evaluate_probe(
@@ -28,6 +29,7 @@ def evaluate_probe(
             roc_auc_score=0.0,
             fprs=[],
             tprs=[],
+            probabilities=[],
         )
 
     predictions_prob = probe.predict(activations.activations)
@@ -55,4 +57,5 @@ def evaluate_probe(
         roc_auc_score=roc_auc_score,
         fprs=fpr.tolist(),
         tprs=tpr.tolist(),
+        probabilities=predictions_prob.tolist(),
     )
