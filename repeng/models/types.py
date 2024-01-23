@@ -18,6 +18,12 @@ PythiaId = Literal[
     "pythia-6.9b",
     "pythia-12b",
 ]
+PythiaDpoId = Literal[
+    "pythia-dpo-1b",
+    "pythia-dpo-1.4b",
+    "pythia-sft-1b",
+    "pythia-sft-1.4b",
+]
 Gpt2Id = Literal["gpt2"]
 Llama2Id = Literal[
     "Llama-2-7b-hf",
@@ -27,7 +33,7 @@ Llama2Id = Literal[
     "Llama-2-13b-chat-hf",
     "Llama-2-70b-chat-hf",
 ]
-LlmId = PythiaId | Gpt2Id | Llama2Id
+LlmId = PythiaId | PythiaDpoId | Gpt2Id | Llama2Id
 
 
 @dataclass
