@@ -14,7 +14,7 @@ class ProbeEvalResult(BaseModel, extra="forbid"):
     roc_auc_score: float
     fprs: list[float]
     tprs: list[float]
-    probabilities: list[float]
+    logits: list[float]
 
 
 def evaluate_probe(
@@ -29,21 +29,19 @@ def evaluate_probe(
             roc_auc_score=0.0,
             fprs=[],
             tprs=[],
-            probabilities=[],
+            logits=[],
         )
 
-    predictions_prob = probe.predict(activations.activations)
-    assert all(0 <= prob <= 1 for prob in predictions_prob)
-    predictions = predictions_prob > 0.5
+    result = probe.predict(activations.activations)
     labels = activations.labels
     # TODO:
     # if (predictions == labels).mean() < 0.5:
     #     predictions = ~predictions
-    f1_score = sklearn.metrics.f1_score(labels, predictions, zero_division=0)
-    precision = sklearn.metrics.precision_score(labels, predictions, zero_division=0)
-    recall = sklearn.metrics.recall_score(labels, predictions, zero_division=0)
-    roc_auc_score = sklearn.metrics.roc_auc_score(labels, predictions_prob)
-    fpr, tpr, _ = sklearn.metrics.roc_curve(labels, predictions_prob)
+    f1_score = sklearn.metrics.f1_score(labels, result.labels, zero_division=0)
+    precision = sklearn.metrics.precision_score(labels, result.labels, zero_division=0)
+    recall = sklearn.metrics.recall_score(labels, result.labels, zero_division=0)
+    roc_auc_score = sklearn.metrics.roc_auc_score(labels, result.logits)
+    fpr, tpr, _ = sklearn.metrics.roc_curve(labels, result.logits)
     assert (
         isinstance(f1_score, float)
         and isinstance(precision, float)
@@ -57,5 +55,5 @@ def evaluate_probe(
         roc_auc_score=roc_auc_score,
         fprs=fpr.tolist(),
         tprs=tpr.tolist(),
-        probabilities=predictions_prob.tolist(),
+        logits=result.logits.tolist(),
     )

@@ -11,7 +11,7 @@ from tqdm import tqdm
 from typing_extensions import override
 
 from repeng.activations.probe_preparations import PairedActivationArray
-from repeng.probes.base import BaseProbe
+from repeng.probes.base import BaseProbe, PredictResult
 
 
 class CcsProbe(torch.nn.Module, BaseProbe):
@@ -33,8 +33,12 @@ class CcsProbe(torch.nn.Module, BaseProbe):
     def predict(
         self,
         activations: Float[np.ndarray, "n d"],  # noqa: F722
-    ) -> Float[np.ndarray, "n"]:  # noqa: F821
-        return self(torch.tensor(activations)).numpy()
+    ) -> PredictResult:
+        probabilities = self(torch.tensor(activations)).numpy()
+        return PredictResult(
+            logits=probabilities,
+            labels=probabilities > 0.5,
+        )
 
 
 @dataclass

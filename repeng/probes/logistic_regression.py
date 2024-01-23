@@ -5,7 +5,7 @@ from jaxtyping import Float
 from sklearn.linear_model import LogisticRegression
 
 from repeng.activations.probe_preparations import LabeledActivationArray
-from repeng.probes.base import BaseProbe
+from repeng.probes.base import BaseProbe, PredictResult
 
 
 @dataclass
@@ -15,8 +15,12 @@ class LogisticRegressionProbe(BaseProbe):
     def predict(
         self,
         activations: Float[np.ndarray, "n d"],  # noqa: F722
-    ) -> Float[np.ndarray, "n"]:  # noqa: F821
-        return self.model.predict(activations)
+    ) -> PredictResult:
+        logits = self.model.decision_function(activations)
+        return PredictResult(
+            logits=logits,
+            labels=logits > 0,
+        )
 
 
 def train_lr_probe(
