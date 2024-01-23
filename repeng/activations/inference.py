@@ -24,8 +24,12 @@ class ActivationRow(BaseModel, extra="forbid"):
 @torch.inference_mode()
 def get_model_activations(
     llm: Llm[ModelT, PreTrainedTokenizerFast],
+    *,
     text: str,
+    last_n_tokens: int,
 ) -> ActivationRow:
+    assert last_n_tokens > 0, last_n_tokens
+
     tokens = llm.tokenizer.encode(text)
     tokens_str = llm.tokenizer.tokenize(text)
     tokens = llm.tokenizer.convert_tokens_to_ids(tokens_str)
@@ -47,7 +51,7 @@ def get_model_activations(
         text=text,
         text_tokenized=tokens_str,
         activations={
-            name: activations.float().squeeze(0).detach().cpu().numpy()
+            name: activations.float().squeeze(0)[-last_n_tokens:].detach().cpu().numpy()
             for name, activations in layer_activations.items()
         },
         token_logprobs=token_logprobs.float().cpu().numpy(),

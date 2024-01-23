@@ -14,7 +14,9 @@ from repeng.models.types import Gpt2Id, Llama2Id, Llm, LlmId, PythiaDpoId, Pythi
 
 
 @overload
-def get_llm(llm_id: PythiaId) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
+def get_llm(
+    llm_id: PythiaId | PythiaDpoId,
+) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     ...
 
 

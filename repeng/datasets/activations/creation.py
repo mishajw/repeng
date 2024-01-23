@@ -14,6 +14,8 @@ from repeng.models.loading import load_llm_oioo
 
 assert load_dotenv()
 
+_LAST_N_TOKENS = 3
+
 
 class BinaryRowWithLlm(BinaryRow):
     llm_id: LlmId
@@ -53,7 +55,8 @@ def create_activations_dataset(
                     device=device,
                     dtype=torch.bfloat16,
                 ),
-                value.text,
+                text=value.text,
+                last_n_tokens=_LAST_N_TOKENS,
             ),
             to="pickle",
         )
