@@ -36,6 +36,14 @@ Llama2Id = Literal[
 LlmId = PythiaId | PythiaDpoId | Gpt2Id | Llama2Id
 
 
+PYTHIA_DPO_TO_PYTHIA: dict[PythiaDpoId, PythiaId] = {
+    "pythia-dpo-1b": "pythia-1b",
+    "pythia-dpo-1.4b": "pythia-1.4b",
+    "pythia-sft-1b": "pythia-1b",
+    "pythia-sft-1.4b": "pythia-1.4b",
+}
+
+
 @dataclass
 class Llm(Generic[_ModelT, _TokenizerT]):
     model: _ModelT

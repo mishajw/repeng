@@ -3,7 +3,14 @@ from typing import Any, cast, get_args, overload
 from transformers import GPT2LMHeadModel, GPTNeoXForCausalLM, LlamaForCausalLM
 
 from repeng.hooks.points import Point, TupleTensorExtractor
-from repeng.models.types import Gpt2Id, Llama2Id, LlmId, PythiaId
+from repeng.models.types import (
+    PYTHIA_DPO_TO_PYTHIA,
+    Gpt2Id,
+    Llama2Id,
+    LlmId,
+    PythiaDpoId,
+    PythiaId,
+)
 
 _GPT2_NUM_LAYERS = 12
 _PYTHIA_NUM_LAYERS: dict[PythiaId, int] = {
@@ -27,7 +34,7 @@ _LLAMA2_NUM_LAYERS: dict[Llama2Id, int] = {
 
 
 @overload
-def get_points(llm_id: PythiaId) -> list[Point[GPTNeoXForCausalLM]]:
+def get_points(llm_id: PythiaId | PythiaDpoId) -> list[Point[GPTNeoXForCausalLM]]:
     ...
 
 
@@ -48,6 +55,8 @@ def get_points(llm_id: LlmId) -> list[Point[Any]]:
         return gpt2()
     elif llm_id in get_args(Llama2Id):
         return llama2(cast(Llama2Id, llm_id))
+    elif llm_id in get_args(PythiaDpoId):
+        return pythia(PYTHIA_DPO_TO_PYTHIA[cast(PythiaDpoId, llm_id)])
     else:
         raise ValueError(f"Unknown LLM ID: {llm_id}")
 
