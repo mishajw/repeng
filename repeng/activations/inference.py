@@ -47,7 +47,7 @@ def get_model_activations(
         text=text,
         text_tokenized=tokens_str,
         activations={
-            name: activations.float().squeeze(0)[-1].detach().cpu().numpy()
+            name: activations.float().squeeze(0).detach().cpu().numpy()
             for name, activations in layer_activations.items()
         },
         token_logprobs=token_logprobs.float().cpu().numpy(),
