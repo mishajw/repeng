@@ -57,12 +57,12 @@ def pythia(
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     model = GPTNeoXForCausalLM.from_pretrained(
         f"EleutherAI/{pythia_id}",
-        revision="step3000",
+        revision="step143000",
     )
     assert isinstance(model, GPTNeoXForCausalLM)
     tokenizer = AutoTokenizer.from_pretrained(
         f"EleutherAI/{pythia_id}",
-        revision="step3000",
+        revision="step143000",
     )
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
     return Llm(
