@@ -10,7 +10,7 @@ from repeng.probes.linear_artificial_tomography import (
 from repeng.probes.logistic_regression import train_lr_probe
 from repeng.probes.mean_mass_probe import train_mmp_probe
 
-ProbeId = Literal["ccs", "lat", "mmp", "lr"]
+ProbeId = Literal["ccs", "lat", "mmp", "mmp-iid", "lr"]
 
 
 def train_probe(probe_id: ProbeId, probe_arrays: ProbeArrays) -> BaseProbe:
@@ -27,6 +27,12 @@ def train_probe(probe_id: ProbeId, probe_arrays: ProbeArrays) -> BaseProbe:
     elif probe_id == "mmp":
         return train_mmp_probe(
             probe_arrays.labeled,
+            use_iid=False,
+        )
+    elif probe_id == "mmp-iid":
+        return train_mmp_probe(
+            probe_arrays.labeled,
+            use_iid=True,
         )
     elif probe_id == "lr":
         return train_lr_probe(
