@@ -28,7 +28,6 @@ def load_llm_oioo(
         else:
             print(f"Loading LLM {llm_id}")
         _loaded_llm_id = llm_id
-        _loaded_llm = get_llm(llm_id)
-        _loaded_llm.model = _loaded_llm.model.to(dtype=dtype).to(device=device)
+        _loaded_llm = get_llm(llm_id, device, dtype)
     assert _loaded_llm is not None
     return _loaded_llm

@@ -1,5 +1,6 @@
 from typing import Any, cast, get_args, overload
 
+import torch
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -16,35 +17,54 @@ from repeng.models.types import Gpt2Id, Llama2Id, Llm, LlmId, PythiaDpoId, Pythi
 @overload
 def get_llm(
     llm_id: PythiaId | PythiaDpoId,
+    device: torch.device,
+    dtype: torch.dtype,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     ...
 
 
 @overload
-def get_llm(llm_id: Gpt2Id) -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
+def get_llm(
+    llm_id: Gpt2Id,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
     ...
 
 
 @overload
-def get_llm(llm_id: Llama2Id) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
+def get_llm(
+    llm_id: Llama2Id,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
     ...
 
 
-def get_llm(llm_id: LlmId) -> Llm[Any, Any]:
+def get_llm(
+    llm_id: LlmId,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> Llm[Any, Any]:
     if llm_id in get_args(PythiaId):
-        return pythia(cast(PythiaId, llm_id))
+        return pythia(cast(PythiaId, llm_id), device, dtype)
     elif llm_id in get_args(Gpt2Id):
-        return gpt2()
+        return gpt2(device, dtype)
     elif llm_id in get_args(Llama2Id):
-        return llama2(cast(Llama2Id, llm_id))
+        return llama2(cast(Llama2Id, llm_id), device, dtype)
     elif llm_id in get_args(PythiaDpoId):
-        return pythia_dpo(cast(PythiaDpoId, llm_id))
+        return pythia_dpo(cast(PythiaDpoId, llm_id), device, dtype)
     else:
         raise ValueError(f"Unknown LLM ID: {llm_id}")
 
 
-def gpt2() -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
-    model = AutoModelForCausalLM.from_pretrained("gpt2")
+def gpt2(
+    device: torch.device,
+    dtype: torch.dtype,
+) -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
+    model = AutoModelForCausalLM.from_pretrained(
+        "gpt2", device_map=device, torch_dtype=dtype
+    )
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
     return Llm(
@@ -56,10 +76,14 @@ def gpt2() -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
 
 def pythia(
     pythia_id: PythiaId,
+    device: torch.device,
+    dtype: torch.dtype,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     model = GPTNeoXForCausalLM.from_pretrained(
         f"EleutherAI/{pythia_id}",
         revision="step143000",
+        device_map=device,
+        torch_dtype=dtype,
     )
     assert isinstance(model, GPTNeoXForCausalLM)
     tokenizer = AutoTokenizer.from_pretrained(
@@ -76,6 +100,8 @@ def pythia(
 
 def pythia_dpo(
     pythia_dpo_id: PythiaDpoId,
+    device: torch.device,
+    dtype: torch.dtype,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     if pythia_dpo_id == "pythia-dpo-1b":
         model_id = "Leogrin/eleuther-pythia1b-hh-dpo"
@@ -91,7 +117,9 @@ def pythia_dpo(
         pythia_id = "pythia-1.4b"
     else:
         raise ValueError(f"Unknown Pythia DPO ID: {pythia_dpo_id}")
-    model = GPTNeoXForCausalLM.from_pretrained(model_id)
+    model = GPTNeoXForCausalLM.from_pretrained(
+        model_id, device_map=device, torch_dtype=dtype
+    )
     assert isinstance(model, GPTNeoXForCausalLM)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
@@ -100,8 +128,12 @@ def pythia_dpo(
 
 def llama2(
     llama_id: Llama2Id,
+    device: torch.device,
+    dtype: torch.dtype,
 ) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
-    model = AutoModelForCausalLM.from_pretrained(f"meta-llama/{llama_id}")
+    model = AutoModelForCausalLM.from_pretrained(
+        f"meta-llama/{llama_id}", device_map=device, torch_dtype=dtype
+    )
     assert isinstance(model, LlamaForCausalLM)
     tokenizer = AutoTokenizer.from_pretrained(f"meta-llama/{llama_id}")
     assert isinstance(tokenizer, PreTrainedTokenizerFast)
