@@ -16,10 +16,7 @@ DatasetCollectionId = Literal[
     "all",
     "representation-engineering",
     "geometry-of-truth",
-    "geometry-of-truth-cities",
     "geometry-of-truth-cities-with-neg",
-    "persona",
-    "misc",
 ]
 
 
@@ -42,19 +39,9 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
         "geometry_of_truth-cities_cities_conj",
         "geometry_of_truth-cities_cities_disj",
     ],
-    "geometry-of-truth-cities": [
-        "geometry_of_truth-cities",
-    ],
     "geometry-of-truth-cities-with-neg": [
         "geometry_of_truth-cities",
         "geometry_of_truth-neg_cities",
-    ],
-    "persona": [
-        "truthful_model_written",
-    ],
-    "misc": [
-        "true_false",
-        "truthful_qa",
     ],
 }
 
@@ -87,13 +74,18 @@ _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
 def get_dataset_collection(
     dataset_collection_id: DatasetCollectionId,
 ) -> dict[str, BinaryRow]:
-    return get_datasets(get_dataset_ids_for_collection(dataset_collection_id))
+    return get_datasets(resolve_dataset_ids(dataset_collection_id))
 
 
-def get_dataset_ids_for_collection(
-    dataset_collection_id: DatasetCollectionId,
+def resolve_dataset_ids(
+    id: DatasetId | DatasetCollectionId,
 ) -> list[DatasetId]:
-    return _DATASET_COLLECTIONS[dataset_collection_id]
+    if id in get_args(DatasetId):
+        return [cast(DatasetId, id)]
+    elif id in get_args(DatasetCollectionId):
+        return _DATASET_COLLECTIONS[cast(DatasetCollectionId, id)]
+    else:
+        raise ValueError(f"Unknown ID: {id}")
 
 
 def get_datasets(dataset_ids: list[DatasetId]) -> dict[str, BinaryRow]:
