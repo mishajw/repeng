@@ -1,4 +1,5 @@
 import warnings
+from typing import cast
 
 import sklearn.metrics
 from pydantic import BaseModel
@@ -34,9 +35,10 @@ def evaluate_probe(
 
     result = probe.predict(activations.activations)
     labels = activations.labels
-    # TODO:
-    # if (predictions == labels).mean() < 0.5:
-    #     predictions = ~predictions
+    if cast(float, sklearn.metrics.roc_auc_score(labels, result.logits)) < 0.5:
+        # TODO: Is this correct?
+        result.logits = -result.logits
+        result.labels = ~result.labels
     f1_score = sklearn.metrics.f1_score(labels, result.labels, zero_division=0)
     precision = sklearn.metrics.precision_score(labels, result.labels, zero_division=0)
     recall = sklearn.metrics.recall_score(labels, result.labels, zero_division=0)
