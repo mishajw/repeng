@@ -58,6 +58,7 @@ lat_probe = train_lat_probe(
 )
 lr_probe = train_lr_probe(activations.labeled)
 mmp_probe = train_mmp_probe(activations.labeled, use_iid=False)
+mmp_iid_probe = train_mmp_probe(activations.labeled, use_iid=True)
 ccs_probe = train_ccs_probe(activations.paired, CcsTrainingConfig(num_steps=1000))
 
 # %%
@@ -75,19 +76,6 @@ def plot_probe(
     ys = -(probe[1] / probe[0]) * xs - (intercept / probe[0])
     # TODO: Why swapped?
     fig.add_trace(go.Scatter(x=ys, y=xs, mode="lines", name=label))
-    # fig.add_annotation(
-    #     x=xs[1] + probe[0],
-    #     y=ys[1] + probe[1],
-    #     ax=xs[1],
-    #     ay=ys[1],
-    #     xref="x",
-    #     yref="y",
-    #     axref="x",
-    #     ayref="y",
-    #     showarrow=True,
-    #     arrowhead=1,
-    #     arrowwidth=2,
-    # )
 
 
 fig = px.scatter(df, "x", "y", color="label", opacity=0.3)
@@ -99,6 +87,7 @@ fig.update_yaxes(scaleanchor="x", scaleratio=1)
 plot_probe("lat", fig, lat_probe.probe, 0)
 plot_probe("lr", fig, lr_probe.model.coef_[0], lr_probe.model.intercept_[0])
 plot_probe("mmp", fig, mmp_probe.probe, 0)
+plot_probe("mmp-iid", fig, mmp_iid_probe.probe, 0)
 plot_probe(
     "ccs",
     fig,
