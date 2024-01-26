@@ -59,13 +59,13 @@ class ProbeTrainSpec:
 
 # %%
 llm_ids: list[LlmId] = [
-    "pythia-70m",
-    "pythia-160m",
-    "pythia-410m",
+    # "pythia-70m",
+    # "pythia-160m",
+    # "pythia-410m",
     "pythia-1b",
-    "pythia-1.4b",
-    "pythia-2.8b",
-    "pythia-6.9b",
+    # "pythia-1.4b",
+    # "pythia-2.8b",
+    # "pythia-6.9b",
 ]
 llm_points = {llm_id: get_points(llm_id) for llm_id in llm_ids}
 point_ids_by_llm = {
@@ -78,31 +78,21 @@ point_ids_by_llm = {
     for llm_id in llm_ids
 }
 dataset_collection_ids: list[DatasetId | DatasetCollectionId] = [
-    # "all",
-    # "representation-engineering",
-    # "geometry-of-truth",
+    "representation-engineering",
+    "geometry_of_truth-cities",
+    "geometry_of_truth-neg_cities",
     "geometry-of-truth-cities-with-neg",
-    "geometry-of-truth-cities-with-neg",
+    "open_book_qa",
+    "common_sense_qa",
+    "race",
     "arc_challenge",
     "arc_easy",
-    "geometry_of_truth-cities",
-    "geometry_of_truth-sp_en_trans",
-    "geometry_of_truth-neg_sp_en_trans",
-    "geometry_of_truth-larger_than",
-    "geometry_of_truth-smaller_than",
-    "geometry_of_truth-cities_cities_conj",
-    "geometry_of_truth-cities_cities_disj",
-    "common_sense_qa",
-    "open_book_qa",
-    "race",
-    "truthful_qa",
-    "truthful_model_written",
-    "true_false",
 ]
 probe_ids: list[ProbeId] = [
     "lat",
     "mmp",
     "mmp-iid",
+    "lr",
 ]
 probe_train_specs = mcontext.create(
     {
@@ -171,9 +161,18 @@ class ProbeEvalSpec:
     dataset_id: DatasetId
 
 
-evaluation_dataset_ids = sorted(
-    set(row.dataset_id for row in activations_dataset if row.split == "validation")
-)
+# evaluation_dataset_ids = sorted(
+#     set(row.dataset_id for row in activations_dataset if row.split == "validation")
+# )
+evaluation_dataset_ids: list[DatasetId] = [
+    "geometry_of_truth-cities",
+    "geometry_of_truth-neg_cities",
+    "open_book_qa",
+    "common_sense_qa",
+    "race",
+    "arc_challenge",
+    "arc_easy",
+]
 
 probe_eval_specs = probes.join(
     probe_train_specs,
@@ -265,7 +264,7 @@ fig.tight_layout()
 # %% plot probe performance by model size
 df_subset = df.copy()
 df_subset = df_subset[df_subset["point_id"] == "p90"]
-df_subset = df_subset[df_subset["probe_id"] == "lat"]
+df_subset = df_subset[df_subset["probe_id"] == "mmp"]
 df_subset = df_subset.drop(columns=["point_id", "probe_id"])
 g = (
     sns.FacetGrid(
@@ -296,34 +295,16 @@ sns.barplot(
     legend=False,
 )
 
-# %% bin
-# # %%
-# df_subset = df.copy()
-# df_subset = df_subset[df_subset["probe_id"] == "lat"]
-# df_subset = df_subset[df_subset["dataset_collection_id"] == "all"]
-# sns.lineplot(data=df_subset, x="point_id", y="f1_score", hue="llm_id", errorbar=None)
-# plt.xticks(rotation=90)
-# plt.show()
-
-# # %%
-# df_subset = df.copy()
-# df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
-# df_subset = df_subset[df_subset["point_id"] == "h21"]
-# df_subset = df_subset[df_subset["probe_id"] == "mmp"]
-# # df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry-of-truth"]
-# sns.barplot(
-#     data=df_subset, x="eval_dataset_id", y="f1_score", hue="dataset_collection_id"
-# )
-# plt.xticks(rotation=90)
-# plt.show()
-
-# # %%
-# df_subset = df.copy()
-# df_subset = df_subset[df_subset["eval_dataset_id"] == "geometry_of_truth-cities"]
-# # df_subset = df_subset[df_subset["point_id"] == "h21"]
-# df_subset = df_subset[df_subset["dataset_collection_id"] == "all"]
-# df_subset = df_subset[df_subset["probe_id"] == "mmp"]
-# # df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry-of-truth"]
-# sns.lineplot(data=df_subset, x="point_id", y="f1_score", hue="llm_id")
-# plt.xticks(rotation=90)
-# plt.show()
+# %% generalization matrix
+df_subset = df.copy()
+df_subset = df_subset[df_subset["llm_id"] == "pythia-1b"]
+df_subset = df_subset[df_subset["point_id"] == "p90"]
+df_subset = df_subset[df_subset["probe_id"] == "lr"]
+df_subset = df_subset.pivot(
+    index="dataset_collection_id",
+    columns="eval_dataset_id",
+    values="roc_auc_score",
+)
+df_subset = df_subset.sort_index(level=0)
+df_subset = df_subset.sort_values("dataset_collection_id")
+sns.heatmap(df_subset, annot=True, fmt=".2f", cmap="Blues")
