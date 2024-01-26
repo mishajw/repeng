@@ -6,8 +6,8 @@ from mppr import MContext
 
 from repeng.activations.inference import get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.elk.types import BinaryRow
-from repeng.datasets.elk.utils.collections import get_dataset_collection
+from repeng.datasets.elk.types import BinaryRow, DatasetId
+from repeng.datasets.elk.utils.collections import get_datasets
 from repeng.datasets.elk.utils.filters import limit_dataset_and_split_fn
 from repeng.models.llms import LlmId
 from repeng.models.loading import load_llm_oioo
@@ -23,19 +23,24 @@ class BinaryRowWithLlm(BinaryRow):
 
 def create_activations_dataset(
     tag: str,
-    num_samples_per_dataset: int,
     llm_ids: list[LlmId],
+    dataset_ids: list[DatasetId],
+    num_samples_per_dataset: int,
+    num_validation_samples_per_dataset: int,
     device: torch.device,
 ) -> list[ActivationResultRow]:
     mcontext = MContext(Path("output/create-activations-dataset"))
     inputs = (
         mcontext.create_cached(
             "init",
-            init_fn=lambda: get_dataset_collection("all"),
+            init_fn=lambda: get_datasets(dataset_ids),
             to=BinaryRow,
         )
         .filter(
-            limit_dataset_and_split_fn(num_samples_per_dataset),
+            limit_dataset_and_split_fn(
+                train_limit=num_samples_per_dataset,
+                validation_limit=num_validation_samples_per_dataset,
+            )
         )
         .flat_map(
             lambda key, row: {

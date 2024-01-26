@@ -2,26 +2,34 @@ import fire
 import torch
 
 from repeng.datasets.activations.creation import create_activations_dataset
+from repeng.datasets.elk.types import DatasetId
+from repeng.datasets.elk.utils.collections import (
+    DatasetCollectionId,
+    resolve_dataset_ids,
+)
+from repeng.models.collections import LlmCollectionId, resolve_llm_ids
 from repeng.models.types import LlmId
 
 
-def main(tag: str, *, num_samples_per_dataset: int, device: str):
+def main(
+    tag: str,
+    *,
+    llms: LlmCollectionId | LlmId,
+    datasets: DatasetCollectionId | DatasetId,
+    device: str,
+    num_samples_per_dataset: int,
+    num_validation_samples_per_dataset: int | None = None,
+):
+    if num_validation_samples_per_dataset is None:
+        num_validation_samples_per_dataset = num_samples_per_dataset // 5
     # 25GB of disk space needed to store these model weights
     # 10GB of disk space needed to store activations dataset
-    llm_ids: list[LlmId] = [
-        "pythia-70m",
-        "pythia-160m",
-        "pythia-410m",
-        "pythia-1b",
-        "pythia-1.4b",
-        "pythia-2.8b",
-        "pythia-6.9b",
-        # "pythia-12b",
-    ]
     create_activations_dataset(
         tag=tag,
+        llm_ids=resolve_llm_ids(llms),
+        dataset_ids=resolve_dataset_ids(datasets),
         num_samples_per_dataset=num_samples_per_dataset,
-        llm_ids=llm_ids,
+        num_validation_samples_per_dataset=num_validation_samples_per_dataset,
         device=torch.device(device),
     )
 
