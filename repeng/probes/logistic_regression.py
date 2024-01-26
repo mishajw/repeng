@@ -26,6 +26,7 @@ class LogisticRegressionProbe(BaseProbe):
 def train_lr_probe(
     activations: LabeledActivationArray,
 ) -> LogisticRegressionProbe:
-    model = LogisticRegression(max_iter=1000)
-    model.fit(activations.activations, activations.labels)
+    activations_centered = activations.activations
+    model = LogisticRegression(max_iter=1000, fit_intercept=True)
+    model.fit(activations_centered, activations.labels)
     return LogisticRegressionProbe(model)
