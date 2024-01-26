@@ -55,8 +55,8 @@ def train_ccs_probe(
     _, hidden_dim = activations.activations_1.shape
     probe = CcsProbe(hidden_dim=hidden_dim)
     optimizer = torch.optim.Adam(probe.parameters(), lr=config.lr)
-    activations_1 = torch.tensor(activations.activations_1)
-    activations_2 = torch.tensor(activations.activations_2)
+    activations_1 = torch.tensor(activations.activations_1, dtype=torch.float32)
+    activations_2 = torch.tensor(activations.activations_2, dtype=torch.float32)
 
     bar = tqdm(range(config.num_steps))
     for _ in bar:
