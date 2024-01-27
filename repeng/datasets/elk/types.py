@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel
 
@@ -15,6 +15,17 @@ DatasetId = Literal[
     "geometry_of_truth-smaller_than",
     "geometry_of_truth-cities_cities_conj",
     "geometry_of_truth-cities_cities_disj",
+    "common_sense_qa",
+    "open_book_qa",
+    "race",
+    "truthful_qa",
+    "truthful_model_written",
+    "true_false",
+]
+
+PairedDatasetId = Literal[
+    "arc_challenge",
+    "arc_easy",
     "common_sense_qa",
     "open_book_qa",
     "race",
@@ -40,3 +51,7 @@ class InputRow(BaseModel, extra="forbid"):
     text: str
     is_text_true: bool
     does_text_contain_true: bool
+
+
+def is_dataset_paired(dataset_id: DatasetId) -> bool:
+    return dataset_id in get_args(PairedDatasetId)

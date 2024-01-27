@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import numpy as np
-from jaxtyping import Bool, Float
+from jaxtyping import Bool, Float, Int64
 from typing_extensions import override
 
 
@@ -14,6 +14,22 @@ class BaseProbe(ABC):
     ) -> "PredictResult":
         """
         Predicts the probability of the label being true for each row.
+        """
+        ...
+
+
+class BasePairedProbe(BaseProbe, ABC):
+    @abstractmethod
+    def predict_paired(
+        self,
+        activations: Float[np.ndarray, "n d"],  # noqa: F722
+        pairs: Int64[np.ndarray, "n"],  # noqa: F821
+    ) -> "PredictResult":
+        """
+        Predicts the probability of the label being true for each row.
+
+        Activations are grouped into pairs, and the pair information is used for
+        predictions.
         """
         ...
 

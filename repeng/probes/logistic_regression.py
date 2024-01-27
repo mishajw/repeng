@@ -2,25 +2,45 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from jaxtyping import Float
+from jaxtyping import Float, Int64
 from sklearn.linear_model import LogisticRegression
+from typing_extensions import override
 
 from repeng.activations.probe_preparations import (
     LabeledActivationArray,
     LabeledPairedActivationArray,
 )
-from repeng.probes.base import BaseProbe, PredictResult
+from repeng.probes.base import BasePairedProbe, BaseProbe, PredictResult
 
 
 @dataclass
 class LogisticRegressionProbe(BaseProbe):
     model: LogisticRegression
 
+    @override
     def predict(
         self,
         activations: Float[np.ndarray, "n d"],  # noqa: F722
     ) -> PredictResult:
         logits = self.model.decision_function(activations)
+        return PredictResult(
+            logits=logits,
+            labels=logits > 0,
+        )
+
+
+@dataclass
+class LogisticRegressionPairedProbe(BasePairedProbe, LogisticRegressionProbe):
+    model: LogisticRegression
+
+    @override
+    def predict_paired(
+        self,
+        activations: Float[np.ndarray, "n d"],  # noqa: F722
+        pairs: Int64[np.ndarray, "n"],  # noqa: F821
+    ) -> PredictResult:
+        activations_centered = _center_pairs(activations, pairs)
+        logits = self.model.decision_function(activations_centered)
         return PredictResult(
             logits=logits,
             labels=logits > 0,
@@ -37,12 +57,25 @@ def train_lr_probe(
 
 def train_paired_lr_probe(
     activations: LabeledPairedActivationArray,
-) -> LogisticRegressionProbe:
+) -> LogisticRegressionPairedProbe:
+    probe = train_lr_probe(
+        LabeledActivationArray(
+            activations=_center_pairs(activations.activations, activations.pairs),
+            labels=activations.labels,
+        )
+    )
+    return LogisticRegressionPairedProbe(model=probe.model)
+
+
+# TODO: Double check this preserves order.
+def _center_pairs(
+    activations: Float[np.ndarray, "n d"],  # noqa: F722
+    pairs: Int64[np.ndarray, "n"],  # noqa: F821
+) -> Float[np.ndarray, "n d"]:  # noqa: F722
     df = pd.DataFrame(
         {
-            "activations": list(activations.activations),
-            "pairs": activations.pairs,
-            "labels": activations.labels,
+            "activations": list(activations),
+            "pairs": pairs,
         }
     )
     pair_means = (
@@ -52,8 +85,4 @@ def train_paired_lr_probe(
     )
     df = df.join(pair_means, on="pairs")
     df["activations"] = df["activations"] - df["pair_mean"]
-    activations_pair_centered = LabeledActivationArray(
-        activations=np.stack(df["activations"].to_list()),
-        labels=df["labels"].to_numpy(),
-    )
-    return train_lr_probe(activations_pair_centered)
+    return np.stack(df["activations"].to_list())

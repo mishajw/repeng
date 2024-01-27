@@ -4,8 +4,11 @@ from typing import cast
 import sklearn.metrics
 from pydantic import BaseModel
 
-from repeng.activations.probe_preparations import LabeledActivationArray
-from repeng.probes.base import BaseProbe
+from repeng.activations.probe_preparations import (
+    LabeledActivationArray,
+    LabeledPairedActivationArray,
+)
+from repeng.probes.base import BasePairedProbe, BaseProbe, PredictResult
 
 
 class ProbeEvalResult(BaseModel, extra="forbid"):
@@ -16,10 +19,33 @@ class ProbeEvalResult(BaseModel, extra="forbid"):
     fprs: list[float]
     tprs: list[float]
     logits: list[float]
+    is_paired: bool
 
 
 def evaluate_probe(
     probe: BaseProbe, activations: LabeledActivationArray
+) -> ProbeEvalResult:
+    result = probe.predict(activations.activations)
+    return _evaluate(result, activations, is_paired=False)
+
+
+def evaluate_paired_probe(
+    probe: BasePairedProbe,
+    activations: LabeledPairedActivationArray,
+) -> ProbeEvalResult:
+    result = probe.predict_paired(activations.activations, activations.pairs)
+    return _evaluate(
+        result,
+        LabeledActivationArray(activations.activations, activations.labels),
+        is_paired=True,
+    )
+
+
+def _evaluate(
+    result: PredictResult,
+    activations: LabeledActivationArray,
+    *,
+    is_paired: bool,
 ) -> ProbeEvalResult:
     if len(set(activations.labels)) == 1:
         warnings.warn("Only one class in labels")
@@ -31,9 +57,9 @@ def evaluate_probe(
             fprs=[],
             tprs=[],
             logits=[],
+            is_paired=is_paired,
         )
 
-    result = probe.predict(activations.activations)
     labels = activations.labels
     if cast(float, sklearn.metrics.roc_auc_score(labels, result.logits)) < 0.5:
         # TODO: Is this correct?
@@ -58,4 +84,5 @@ def evaluate_probe(
         fprs=fpr.tolist(),
         tprs=tpr.tolist(),
         logits=result.logits.tolist(),
+        is_paired=is_paired,
     )
