@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 from jaxtyping import Float
-from tqdm import tqdm
 from typing_extensions import override
 
 from repeng.activations.probe_preparations import PairedActivationArray
@@ -52,21 +51,23 @@ def train_ccs_probe(
     activations: PairedActivationArray,
     config: CcsTrainingConfig,
 ) -> CcsProbe:
-    _, hidden_dim = activations.activations_1.shape
-    probe = CcsProbe(hidden_dim=hidden_dim)
-    optimizer = torch.optim.Adam(probe.parameters(), lr=config.lr)
-    activations_1 = torch.tensor(activations.activations_1, dtype=torch.float32)
-    activations_2 = torch.tensor(activations.activations_2, dtype=torch.float32)
+    # TODO: Update to new paired activations format.
+    raise NotImplementedError()
+    # _, hidden_dim = activations.activations_1.shape
+    # probe = CcsProbe(hidden_dim=hidden_dim)
+    # optimizer = torch.optim.Adam(probe.parameters(), lr=config.lr)
+    # activations_1 = torch.tensor(activations.activations_1, dtype=torch.float32)
+    # activations_2 = torch.tensor(activations.activations_2, dtype=torch.float32)
 
-    bar = tqdm(range(config.num_steps))
-    for _ in bar:
-        probs_1: torch.Tensor = probe(activations_1)
-        probs_2: torch.Tensor = probe(activations_2)
-        loss_consistency = (probs_1 - (1 - probs_2)).pow(2).mean()
-        loss_confidence = torch.min(probs_1, probs_2).pow(2).mean()
-        loss = loss_consistency + loss_confidence
-        loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        bar.set_postfix(loss=loss.item())
-    return probe.eval()
+    # bar = tqdm(range(config.num_steps))
+    # for _ in bar:
+    #     probs_1: torch.Tensor = probe(activations_1)
+    #     probs_2: torch.Tensor = probe(activations_2)
+    #     loss_consistency = (probs_1 - (1 - probs_2)).pow(2).mean()
+    #     loss_confidence = torch.min(probs_1, probs_2).pow(2).mean()
+    #     loss = loss_consistency + loss_confidence
+    #     loss.backward()
+    #     optimizer.step()
+    #     optimizer.zero_grad()
+    #     bar.set_postfix(loss=loss.item())
+    # return probe.eval()

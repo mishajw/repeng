@@ -7,14 +7,16 @@ from repeng.probes.linear_artificial_tomography import (
     LatTrainingConfig,
     train_lat_probe,
 )
-from repeng.probes.logistic_regression import train_lr_probe
+from repeng.probes.logistic_regression import train_lr_probe, train_paired_lr_probe
 from repeng.probes.mean_mass_probe import train_mmp_probe
 
-ProbeId = Literal["ccs", "lat", "mmp", "mmp-iid", "lr"]
+ProbeId = Literal["ccs", "lat", "mmp", "mmp-iid", "lr", "lr-paired"]
 
 
-def train_probe(probe_id: ProbeId, probe_arrays: ProbeArrays) -> BaseProbe:
+def train_probe(probe_id: ProbeId, probe_arrays: ProbeArrays) -> BaseProbe | None:
     if probe_id == "ccs":
+        if probe_arrays.paired is None:
+            return None
         return train_ccs_probe(
             probe_arrays.paired,
             CcsTrainingConfig(),
@@ -37,6 +39,12 @@ def train_probe(probe_id: ProbeId, probe_arrays: ProbeArrays) -> BaseProbe:
     elif probe_id == "lr":
         return train_lr_probe(
             probe_arrays.labeled,
+        )
+    elif probe_id == "lr-paired":
+        if probe_arrays.labeled_paired is None:
+            return None
+        return train_paired_lr_probe(
+            probe_arrays.labeled_paired,
         )
     else:
         raise ValueError(f"Unknown probe_id: {probe_id}")

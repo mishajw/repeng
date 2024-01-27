@@ -3,7 +3,7 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
-from jaxtyping import Bool, Float
+from jaxtyping import Bool, Float, Int64
 
 
 @dataclass
@@ -18,7 +18,8 @@ class Activation:
 class ProbeArrays:
     activations: "ActivationArray"
     labeled: "LabeledActivationArray"
-    paired: "PairedActivationArray"
+    paired: "PairedActivationArray | None"
+    labeled_paired: "LabeledPairedActivationArray | None"
 
 
 @dataclass
@@ -34,39 +35,47 @@ class LabeledActivationArray:
 
 @dataclass
 class PairedActivationArray:
-    activations_1: Float[np.ndarray, "n d"]  # noqa: F722
-    activations_2: Float[np.ndarray, "n d"]  # noqa: F722
+    activations: Float[np.ndarray, "n d"]  # noqa: F722
+    pairs: Int64[np.ndarray, "n"]  # noqa: F821
+
+
+@dataclass
+class LabeledPairedActivationArray:
+    activations: Float[np.ndarray, "n d"]  # noqa: F722
+    pairs: Int64[np.ndarray, "n"]  # noqa: F821
+    labels: Bool[np.ndarray, "n"]  # noqa: F821
 
 
 def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeArrays:
     df = pd.DataFrame([asdict(activation) for activation in activations])
-
     activation_array = ActivationArray(
         activations=np.stack(df["activations"].to_list()),
     )
-
     labeled_activations = LabeledActivationArray(
         activations=activation_array.activations,
         labels=df["label"].to_numpy(),
     )
 
-    df_paired = df.groupby(["dataset_id", "pair_id", "label"]).first()
-    df_paired = df_paired.reset_index()
-    df_paired = df_paired.pivot(index="pair_id", columns="label", values="activations")
-    df_paired = df_paired.dropna()
-    if True not in df_paired.columns or False not in df_paired.columns:
-        paired_activations = PairedActivationArray(
-            activations_1=np.zeros((0, 0)),
-            activations_2=np.zeros((0, 0)),
-        )
+    df_paired = df[df["pair_id"].notnull()]
+    if len(df_paired) == 0:
+        paired_activations = None
+        labeled_paired_activations = None
     else:
+        paired_activations = np.stack(df_paired["activations"].to_list())
+        pairs = df_paired["pair_id"].astype("category").cat.codes.to_numpy()
         paired_activations = PairedActivationArray(
-            activations_1=np.stack(df_paired[True].to_list()),
-            activations_2=np.stack(df_paired[False].to_list()),
+            activations=paired_activations,
+            pairs=pairs,
+        )
+        labeled_paired_activations = LabeledPairedActivationArray(
+            activations=paired_activations.activations,
+            pairs=paired_activations.pairs,
+            labels=df_paired["label"].to_numpy(),
         )
 
     return ProbeArrays(
         activations=activation_array,
         labeled=labeled_activations,
         paired=paired_activations,
+        labeled_paired=labeled_paired_activations,
     )
