@@ -22,8 +22,9 @@ def main(
 ):
     if num_validation_samples_per_dataset is None:
         num_validation_samples_per_dataset = num_samples_per_dataset // 5
-    # 25GB of disk space needed to store these model weights
-    # 10GB of disk space needed to store activations dataset
+    # 25GB for model weights (+25GB for pythia-12b)
+    # 50GB for activations dataset
+    # 35GB for pre-upload dataset
     create_activations_dataset(
         tag=tag,
         llm_ids=resolve_llm_ids(llms),
