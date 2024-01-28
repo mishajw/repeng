@@ -81,7 +81,7 @@ def _center_pairs(
     pair_means = (
         df.groupby(["pairs"])["activations"]
         .apply(lambda a: np.mean(a, axis=0))
-        .rename("pair_mean")
+        .rename("pair_mean")  # type: ignore
     )
     df = df.join(pair_means, on="pairs")
     df["activations"] = df["activations"] - df["pair_mean"]

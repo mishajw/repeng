@@ -65,9 +65,21 @@ def _evaluate(
         # TODO: Is this correct?
         result.logits = -result.logits
         result.labels = ~result.labels
-    f1_score = sklearn.metrics.f1_score(labels, result.labels, zero_division=0)
-    precision = sklearn.metrics.precision_score(labels, result.labels, zero_division=0)
-    recall = sklearn.metrics.recall_score(labels, result.labels, zero_division=0)
+    f1_score = sklearn.metrics.f1_score(
+        labels,
+        result.labels,
+        zero_division=0,  # type: ignore
+    )
+    precision = sklearn.metrics.precision_score(
+        labels,
+        result.labels,
+        zero_division=0,  # type: ignore
+    )
+    recall = sklearn.metrics.recall_score(
+        labels,
+        result.labels,
+        zero_division=0,  # type: ignore
+    )
     roc_auc_score = sklearn.metrics.roc_auc_score(labels, result.logits)
     fpr, tpr, _ = sklearn.metrics.roc_curve(labels, result.logits)
     assert (

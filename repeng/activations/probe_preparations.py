@@ -49,7 +49,7 @@ class LabeledPairedActivationArray:
 def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeArrays:
     df = pd.DataFrame([asdict(activation) for activation in activations])
     activation_array = ActivationArray(
-        activations=np.stack(df["activations"].to_list()),
+        activations=np.stack(df["activations"].tolist()),
     )
     labeled_activations = LabeledActivationArray(
         activations=activation_array.activations,
@@ -61,8 +61,10 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
         paired_activations = None
         labeled_paired_activations = None
     else:
-        paired_activations = np.stack(df_paired["activations"].to_list())
-        pairs = df_paired["pair_id"].astype("category").cat.codes.to_numpy()
+        paired_activations = np.stack(df_paired["activations"].tolist())
+        pairs = (
+            df_paired["pair_id"].astype("category").cat.codes.to_numpy()  # type: ignore
+        )
         paired_activations = PairedActivationArray(
             activations=paired_activations,
             pairs=pairs,
@@ -70,7 +72,7 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
         labeled_paired_activations = LabeledPairedActivationArray(
             activations=paired_activations.activations,
             pairs=paired_activations.pairs,
-            labels=df_paired["label"].to_numpy(),
+            labels=df_paired["label"].to_numpy(),  # type: ignore
         )
 
     return ProbeArrays(
