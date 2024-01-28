@@ -14,50 +14,50 @@ from repeng.datasets.elk.types import BinaryRow, DatasetId
 
 DatasetCollectionId = Literal[
     "all",
-    "representation-engineering",
-    "geometry-of-truth",
-    "geometry-of-truth-cities-with-neg",
+    "repe",
+    "geometry_of_truth",
+    "geometry_of_truth/cities_with_neg",
 ]
 
 
 _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
     "all": cast(list[DatasetId], list(get_args(DatasetId))),
-    "representation-engineering": [
+    "repe": [
         "open_book_qa",
         "common_sense_qa",
         "race",
         "arc_challenge",
         "arc_easy",
     ],
-    "geometry-of-truth": [
-        "geometry_of_truth-cities",
-        "geometry_of_truth-neg_cities",
-        "geometry_of_truth-sp_en_trans",
-        "geometry_of_truth-neg_sp_en_trans",
-        "geometry_of_truth-larger_than",
-        "geometry_of_truth-smaller_than",
-        "geometry_of_truth-cities_cities_conj",
-        "geometry_of_truth-cities_cities_disj",
+    "geometry_of_truth": [
+        "geometry_of_truth/cities",
+        "geometry_of_truth/neg_cities",
+        "geometry_of_truth/sp_en_trans",
+        "geometry_of_truth/neg_sp_en_trans",
+        "geometry_of_truth/larger_than",
+        "geometry_of_truth/smaller_than",
+        "geometry_of_truth/cities_cities_conj",
+        "geometry_of_truth/cities_cities_disj",
     ],
-    "geometry-of-truth-cities-with-neg": [
-        "geometry_of_truth-cities",
-        "geometry_of_truth-neg_cities",
+    "geometry_of_truth/cities_with_neg": [
+        "geometry_of_truth/cities",
+        "geometry_of_truth/neg_cities",
     ],
 }
 
 _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
-    "geometry_of_truth-cities": lambda: get_geometry_of_truth("cities"),
-    "geometry_of_truth-neg_cities": lambda: get_geometry_of_truth("neg_cities"),
-    "geometry_of_truth-sp_en_trans": lambda: get_geometry_of_truth("sp_en_trans"),
-    "geometry_of_truth-neg_sp_en_trans": lambda: get_geometry_of_truth(
+    "geometry_of_truth/cities": lambda: get_geometry_of_truth("cities"),
+    "geometry_of_truth/neg_cities": lambda: get_geometry_of_truth("neg_cities"),
+    "geometry_of_truth/sp_en_trans": lambda: get_geometry_of_truth("sp_en_trans"),
+    "geometry_of_truth/neg_sp_en_trans": lambda: get_geometry_of_truth(
         "neg_sp_en_trans"
     ),
-    "geometry_of_truth-larger_than": lambda: get_geometry_of_truth("larger_than"),
-    "geometry_of_truth-smaller_than": lambda: get_geometry_of_truth("smaller_than"),
-    "geometry_of_truth-cities_cities_conj": lambda: get_geometry_of_truth(
+    "geometry_of_truth/larger_than": lambda: get_geometry_of_truth("larger_than"),
+    "geometry_of_truth/smaller_than": lambda: get_geometry_of_truth("smaller_than"),
+    "geometry_of_truth/cities_cities_conj": lambda: get_geometry_of_truth(
         "cities_cities_conj"
     ),
-    "geometry_of_truth-cities_cities_disj": lambda: get_geometry_of_truth(
+    "geometry_of_truth/cities_cities_disj": lambda: get_geometry_of_truth(
         "cities_cities_disj"
     ),
     "arc_challenge": lambda: get_arc("challenge"),

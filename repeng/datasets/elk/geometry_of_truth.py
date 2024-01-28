@@ -19,14 +19,14 @@ Subset = Literal[
 
 _URL = "https://raw.githubusercontent.com/saprmarks/geometry-of-truth/91b2232/datasets"
 _SUBSET_TO_DATASET_ID: dict[Subset, DatasetId] = {
-    "cities": "geometry_of_truth-cities",
-    "neg_cities": "geometry_of_truth-neg_cities",
-    "sp_en_trans": "geometry_of_truth-sp_en_trans",
-    "neg_sp_en_trans": "geometry_of_truth-neg_sp_en_trans",
-    "larger_than": "geometry_of_truth-larger_than",
-    "smaller_than": "geometry_of_truth-smaller_than",
-    "cities_cities_conj": "geometry_of_truth-cities_cities_conj",
-    "cities_cities_disj": "geometry_of_truth-cities_cities_disj",
+    "cities": "geometry_of_truth/cities",
+    "neg_cities": "geometry_of_truth/neg_cities",
+    "sp_en_trans": "geometry_of_truth/sp_en_trans",
+    "neg_sp_en_trans": "geometry_of_truth/neg_sp_en_trans",
+    "larger_than": "geometry_of_truth/larger_than",
+    "smaller_than": "geometry_of_truth/smaller_than",
+    "cities_cities_conj": "geometry_of_truth/cities_cities_conj",
+    "cities_cities_disj": "geometry_of_truth/cities_cities_disj",
 }
 
 

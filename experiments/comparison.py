@@ -73,11 +73,11 @@ point_ids_by_llm = {
     for llm_id in llm_ids
 }
 dataset_collection_ids: list[DatasetId | DatasetCollectionId] = [
-    "representation-engineering",
-    "geometry-of-truth",
+    "repe",
+    "geometry_of_truth",
     "geometry_of_truth-cities",
     "geometry_of_truth-neg_cities",
-    "geometry-of-truth-cities-with-neg",
+    "geometry_of_truth/cities_with_neg",
     "open_book_qa",
     "common_sense_qa",
     "race",
@@ -277,9 +277,9 @@ df2 = df2[df2["eval_dataset_id"] == "truthful_qa"]
 df2 = df2[
     df2["dataset_collection_id"].isin(
         [
-            "geometry-of-truth",
-            "geometry-of-truth-cities-with-neg",
-            "representation-engineering",
+            "geometry_of_truth",
+            "geometry_of_truth/cities_with_neg",
+            "repe",
             "geometry_of_truth-cities",
             "common_sense_qa",
             "open_book_qa",
@@ -373,7 +373,7 @@ plt.show()
 # %%
 df_subset = df.copy()
 df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
-df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry-of-truth-cities"]
+df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry_of_truth-cities"]
 df_subset = df_subset[df_subset["point_id"] == "p100"]
 sns.barplot(
     data=df_subset,
