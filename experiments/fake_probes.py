@@ -19,9 +19,9 @@ from repeng.probes.mean_mass_probe import train_mmp_probe
 
 # %%
 anisotropy_offset = np.array([0, 0], dtype=np.float32)
-dataset_direction = np.array([0, 0], dtype=np.float32)
-dataset_cov = np.array([[1, 0], [0, 0.1]])
-truth_direction = np.array([0, 2])
+dataset_direction = np.array([0, 2], dtype=np.float32)
+dataset_cov = np.array([[0.1, 0.2], [0.2, 1]])
+truth_direction = np.array([2, 0])
 truth_cov = np.array([[0.01, 0], [0, 0.01]])
 num_samples = int(1e3)
 
@@ -62,7 +62,8 @@ mmp_iid_probe = train_mmp_probe(activations.labeled, use_iid=True)
 ccs_probe = train_ccs_probe(activations.paired, CcsTrainingConfig(num_steps=1000))
 
 # %%
-fig_range = 5
+fig_start = -2
+fig_end = 6
 
 
 def plot_probe(
@@ -72,16 +73,20 @@ def plot_probe(
     intercept: float,
 ) -> None:
     print(probe, intercept)
-    xs = np.array([-fig_range, 0, fig_range])
+    xs = np.array([fig_start, 0, fig_end])
     ys = -(probe[1] / probe[0]) * xs - (intercept / probe[0])
     # TODO: Why swapped?
-    fig.add_trace(go.Scatter(x=ys, y=xs, mode="lines", name=label))
+    fig.add_trace(
+        go.Scatter(
+            x=ys, y=xs, mode="lines", name=label, line=dict(width=3), opacity=0.6
+        )
+    )
 
 
 fig = px.scatter(df, "x", "y", color="label", opacity=0.3)
 fig.update_layout(
-    xaxis_range=[-fig_range, fig_range],
-    yaxis_range=[-fig_range, fig_range],
+    xaxis_range=[fig_start, fig_end],
+    yaxis_range=[fig_start, fig_end],
 )
 fig.update_yaxes(scaleanchor="x", scaleratio=1)
 plot_probe("lat", fig, lat_probe.probe, 0)

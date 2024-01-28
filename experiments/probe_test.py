@@ -17,6 +17,7 @@ from repeng.activations.probe_preparations import (
     Activation,
     ActivationArray,
     LabeledActivationArray,
+    LabeledPairedActivationArray,
     prepare_activations_for_probes,
 )
 from repeng.datasets.elk.types import BinaryRow
@@ -36,25 +37,18 @@ dataset = (
         "dataset-csq6",
         lambda: get_datasets(
             [
-                "common_sense_qa/repe",
-                "common_sense_qa/qna",
-                "common_sense_qa/options-numbers",
-                "common_sense_qa/options-letters",
+                "common_sense_qa",
+                # "common_sense_qa/qna",
+                # "common_sense_qa/options-numbers",
+                # "common_sense_qa/options-letters",
                 "open_book_qa",
             ]
         ),
         to=BinaryRow,
     )
+    .filter(lambda _, row: row.dataset_id == "open_book_qa")
     .filter(
-        limit_dataset_and_split_fn(train_limit=2000, validation_limit=500),
-    )
-    .filter(
-        lambda _, row: row.dataset_id
-        in [
-            "common_sense_qa/repe",
-            "open_book_qa",
-            # "common_sense_qa/qna",
-        ]
+        limit_dataset_and_split_fn(train_limit=2000, validation_limit=200),
     )
 )
 
@@ -100,8 +94,8 @@ class InputRow:
 
 
 llm_ids: list[LlmId] = [
-    "pythia-6.9b",
-    # "pythia-1b",
+    # "pythia-6.9b",
+    "pythia-1b",
     # "pythia-dpo-1b",
     # "pythia-sft-1b",
     # "pythia-1.4b",
@@ -130,7 +124,11 @@ inputs = dataset.flat_map(
 activations = inputs.map_cached(
     "activations",
     lambda _, row: get_model_activations(
-        load_llm_oioo(row.llm_id, device=torch.device("cuda"), dtype=torch.bfloat16),
+        load_llm_oioo(
+            row.llm_id,
+            device=torch.device("mps"),
+            dtype=torch.float32,
+        ),
         text=row.text,
         last_n_tokens=1,
     ),
@@ -148,7 +146,7 @@ df = activations.join(
         model=input_row.llm_id,
         few_shot_style=input_row.few_shot_style,
         dataset_id=input_row.row.dataset_id,
-        answer_tag=input_row.row.answer_tag,
+        # answer_tag=input_row.row.answer_tag,
         pair_id=input_row.row.pair_id,
     ),
 ).to_dataframe(lambda d: d)
@@ -177,9 +175,9 @@ for llm_id in llm_ids:
 
 # %%
 df2 = df.copy()
-df2 = df2[df2["dataset_id"] == "common_sense_qa/repe"]
-# df2 = df2[df2["dataset_id"] == "open_book_qa"]
-df2["activation"] = df2["activations"].apply(lambda a: a["h14"][-1])
+# df2 = df2[df2["dataset_id"] == "common_sense_qa"]
+df2 = df2[df2["dataset_id"] == "open_book_qa"]
+df2["activation"] = df2["activations"].apply(lambda a: a["h13"][-1])
 
 # tag_means = (
 #     df2.groupby(["answer_tag"])["activation"]
@@ -194,13 +192,13 @@ df2["activation"] = df2["activations"].apply(lambda a: a["h14"][-1])
 # all_mean = df2["activation"].mean(axis=0)
 # df2["activation"] = df2["activation"].apply(lambda a: a - all_mean)
 
-pair_means = (
-    df2.groupby(["pair_id"])["activation"]
-    .apply(lambda a: np.mean(a, axis=0))
-    .rename("pair_mean")
-)
-df2 = df2.join(pair_means, on="pair_id")
-df2["activation"] -= df2["pair_mean"]
+# pair_means = (
+#     df2.groupby(["pair_id"])["activation"]
+#     .apply(lambda a: np.mean(a, axis=0))
+#     .rename("pair_mean")
+# )
+# df2 = df2.join(pair_means, on="pair_id")
+# df2["activation"] -= df2["pair_mean"]
 
 # pair_std = (
 #     df2.groupby(["pair_id"])["activation"]
@@ -217,7 +215,15 @@ df2["activation"] -= df2["pair_mean"]
 # sns.scatterplot(data=df2, x="pca_0", y="pca_1", hue="label")
 # plt.show()
 
-df2_train = df2[df2["split"] == "train"]
+df2_train = df2[df2["split"] == "train"].copy()
+# pair_means = (
+#     df2_train.groupby(["pair_id"])["activation"]
+#     .apply(lambda a: np.mean(a, axis=0))
+#     .rename("pair_mean")
+# )
+# df2_train = df2_train.join(pair_means, on="pair_id")
+# df2_train["activation"] -= df2_train["pair_mean"]
+
 df2_val = df2[df2["split"] == "validation"]
 train_limit = 2000
 print(train_limit, len(df2_train))
@@ -228,12 +234,18 @@ labelled_activation_array = LabeledActivationArray(
 activation_array = ActivationArray(
     activations=np.array(df2_train["activation"].to_list()[:train_limit]),
 )
+labeled_paired_activation_array = LabeledPairedActivationArray(
+    activations=np.array(df2_train["activation"].to_list()),
+    labels=np.array(df2_train["label"].to_list()),
+    pairs=np.array(df2_train["pair_id"].to_list()),
+)
 activation_array_val = LabeledActivationArray(
     activations=np.array(df2_val["activation"].to_list()),
     labels=np.array(df2_val["label"].to_list()),
 )
 
 probe = train_lr_probe(labelled_activation_array)
+# probe = train_paired_lr_probe(labeled_paired_activation_array)
 # probe = train_mmp_probe(labelled_activation_array, use_iid=False)
 # probe = train_lat_probe(
 #     activation_array,
@@ -337,3 +349,12 @@ for ax, row in zip(axs, df_eval.itertuples()):
 
 # %%
 np.std([np.array([1, 2, 3]), np.array([1, 2, 3])], axis=0)
+
+# %%
+df["activations"].apply(lambda a: a["h14"][-1]).mean()
+# sorted(df["pair_id"].unique())
+acts = np.stack(df["activations"].apply(lambda a: a["h14"][-1]))
+print(acts.shape)
+print(np.cov(acts.T).shape)
+print(acts.mean(axis=0)[:5])
+print(np.cov(acts.T).flatten()[:5])
