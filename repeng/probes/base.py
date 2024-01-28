@@ -18,9 +18,9 @@ class BaseProbe(ABC):
         ...
 
 
-class BasePairedProbe(BaseProbe, ABC):
+class BaseGroupedProbe(BaseProbe, ABC):
     @abstractmethod
-    def predict_paired(
+    def predict_grouped(
         self,
         activations: Float[np.ndarray, "n d"],  # noqa: F722
         pairs: Int64[np.ndarray, "n"],  # noqa: F821

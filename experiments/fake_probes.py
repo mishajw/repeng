@@ -59,7 +59,7 @@ lat_probe = train_lat_probe(
 lr_probe = train_lr_probe(activations.labeled)
 mmp_probe = train_mmp_probe(activations.labeled, use_iid=False)
 mmp_iid_probe = train_mmp_probe(activations.labeled, use_iid=True)
-ccs_probe = train_ccs_probe(activations.paired, CcsTrainingConfig(num_steps=1000))
+ccs_probe = train_ccs_probe(activations.grouped, CcsTrainingConfig(num_steps=1000))
 
 # %%
 fig_start = -2

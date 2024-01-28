@@ -8,9 +8,9 @@ from typing_extensions import override
 
 from repeng.activations.probe_preparations import (
     LabeledActivationArray,
-    LabeledPairedActivationArray,
+    LabeledGroupedActivationArray,
 )
-from repeng.probes.base import BasePairedProbe, BaseProbe, PredictResult
+from repeng.probes.base import BaseGroupedProbe, BaseProbe, PredictResult
 
 
 @dataclass
@@ -30,11 +30,11 @@ class LogisticRegressionProbe(BaseProbe):
 
 
 @dataclass
-class LogisticRegressionPairedProbe(BasePairedProbe, LogisticRegressionProbe):
+class LogisticRegressionGroupedProbe(BaseGroupedProbe, LogisticRegressionProbe):
     model: LogisticRegression
 
     @override
-    def predict_paired(
+    def predict_grouped(
         self,
         activations: Float[np.ndarray, "n d"],  # noqa: F722
         pairs: Int64[np.ndarray, "n"],  # noqa: F821
@@ -55,16 +55,16 @@ def train_lr_probe(
     return LogisticRegressionProbe(model)
 
 
-def train_paired_lr_probe(
-    activations: LabeledPairedActivationArray,
-) -> LogisticRegressionPairedProbe:
+def train_grouped_lr_probe(
+    activations: LabeledGroupedActivationArray,
+) -> LogisticRegressionGroupedProbe:
     probe = train_lr_probe(
         LabeledActivationArray(
-            activations=_center_pairs(activations.activations, activations.pairs),
+            activations=_center_pairs(activations.activations, activations.groups),
             labels=activations.labels,
         )
     )
-    return LogisticRegressionPairedProbe(model=probe.model)
+    return LogisticRegressionGroupedProbe(model=probe.model)
 
 
 # TODO: Double check this preserves order.

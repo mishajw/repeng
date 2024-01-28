@@ -17,7 +17,7 @@ from repeng.activations.probe_preparations import (
     Activation,
     ActivationArray,
     LabeledActivationArray,
-    LabeledPairedActivationArray,
+    LabeledGroupedActivationArray,
     prepare_activations_for_probes,
 )
 from repeng.datasets.elk.types import BinaryRow
@@ -234,10 +234,10 @@ labelled_activation_array = LabeledActivationArray(
 activation_array = ActivationArray(
     activations=np.array(df2_train["activation"].to_list()[:train_limit]),
 )
-labeled_paired_activation_array = LabeledPairedActivationArray(
+labeled_grouped_activation_array = LabeledGroupedActivationArray(
     activations=np.array(df2_train["activation"].to_list()),
     labels=np.array(df2_train["label"].to_list()),
-    pairs=np.array(df2_train["pair_id"].to_list()),
+    groups=np.array(df2_train["pair_id"].to_list()),
 )
 activation_array_val = LabeledActivationArray(
     activations=np.array(df2_val["activation"].to_list()),
@@ -245,7 +245,7 @@ activation_array_val = LabeledActivationArray(
 )
 
 probe = train_lr_probe(labelled_activation_array)
-# probe = train_paired_lr_probe(labeled_paired_activation_array)
+# probe = train_grouped_lr_probe(labeled_grouped_activation_array)
 # probe = train_mmp_probe(labelled_activation_array, use_iid=False)
 # probe = train_lat_probe(
 #     activation_array,

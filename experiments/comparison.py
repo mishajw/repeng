@@ -17,17 +17,17 @@ from repeng.activations.probe_preparations import (
     prepare_activations_for_probes,
 )
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.elk.types import DatasetId, Split, is_dataset_paired
+from repeng.datasets.elk.types import DatasetId, Split, is_dataset_grouped
 from repeng.datasets.elk.utils.collections import (
     DatasetCollectionId,
     resolve_dataset_ids,
 )
-from repeng.evals.probes import ProbeEvalResult, evaluate_paired_probe, evaluate_probe
+from repeng.evals.probes import ProbeEvalResult, evaluate_grouped_probe, evaluate_probe
 from repeng.models.llms import LlmId
 from repeng.models.points import get_points
-from repeng.probes.base import BasePairedProbe, BaseProbe
+from repeng.probes.base import BaseGroupedProbe, BaseProbe
 from repeng.probes.collections import ProbeId, train_probe
-from repeng.probes.logistic_regression import train_lr_probe, train_paired_lr_probe
+from repeng.probes.logistic_regression import train_grouped_lr_probe, train_lr_probe
 
 assert load_dotenv()
 
@@ -89,7 +89,7 @@ probe_ids: list[ProbeId] = [
     "mmp",
     "mmp-iid",
     "lr",
-    "lr-paired",
+    "lr-grouped",
 ]
 probe_train_specs = mcontext.create(
     {
@@ -156,7 +156,7 @@ class ProbeEvalSpec:
     train_spec: ProbeTrainSpec
     probe: BaseProbe
     dataset_id: DatasetId
-    is_paired: bool
+    is_grouped: bool
 
 
 evaluation_dataset_ids: list[DatasetId] = [
@@ -179,10 +179,10 @@ def evaluate(_: str, spec: ProbeEvalSpec) -> ProbeEvalResult:
         point_name=point_ids_by_llm[spec.train_spec.llm_id][spec.train_spec.point_id],
         token_idx_from_back=spec.train_spec.token_idx_from_back,
     )
-    if spec.is_paired:
-        assert probe_arrays.labeled_paired is not None
-        assert isinstance(spec.probe, BasePairedProbe)
-        return evaluate_paired_probe(spec.probe, probe_arrays.labeled_paired)
+    if spec.is_grouped:
+        assert probe_arrays.labeled_grouped is not None
+        assert isinstance(spec.probe, BaseGroupedProbe)
+        return evaluate_grouped_probe(spec.probe, probe_arrays.labeled_grouped)
     else:
         return evaluate_probe(spec.probe, activations=probe_arrays.labeled)
 
@@ -199,19 +199,19 @@ probe_eval_specs = (
                 probe_and_spec[1],
                 cast(BaseProbe, probe_and_spec[0]),
                 evaluation_dataset_id,
-                is_paired=False,
+                is_grouped=False,
             )
             for evaluation_dataset_id in evaluation_dataset_ids
         }
     )
     .flat_map(
         lambda key, spec: {
-            f"{key}-paired={is_paired}": replace(spec, is_paired=is_paired)
-            for is_paired in [True, False]
-            if not is_paired
+            f"{key}-grouped={is_grouped}": replace(spec, is_grouped=is_grouped)
+            for is_grouped in [True, False]
+            if not is_grouped
             or (
-                is_dataset_paired(spec.dataset_id)
-                and isinstance(spec.probe, BasePairedProbe)
+                is_dataset_grouped(spec.dataset_id)
+                and isinstance(spec.probe, BaseGroupedProbe)
             )
         }
     )
@@ -220,10 +220,10 @@ df = pd.DataFrame(
     [
         dict(
             probe_id=row.train_spec.probe_id,
-            is_paired=row.is_paired,
+            is_grouped=row.is_grouped,
             dataset_id=row.dataset_id,
-            is_dataset_paired=is_dataset_paired(row.dataset_id),
-            is_probe_paired=isinstance(row.probe, BasePairedProbe),
+            is_dataset_grouped=is_dataset_grouped(row.dataset_id),
+            is_probe_grouped=isinstance(row.probe, BaseGroupedProbe),
         )
         for row in probe_eval_specs.get()
     ]
@@ -240,7 +240,7 @@ df = probe_evaluations.join(
         **asdict(spec.train_spec),
         **evaluation.model_dump(),
         eval_dataset_id=spec.dataset_id,
-        is_eval_paired=spec.is_paired,
+        is_eval_grouped=spec.is_grouped,
     ),
 ).to_dataframe(lambda d: d)
 df["llm_id"] = pd.Categorical(df["llm_id"], llm_ids)
@@ -286,8 +286,8 @@ df2 = df2[
         ]
     )
 ]
-df2["probe"] = df2["probe_id"] + "+" + df2["is_eval_paired"].astype(str)
-df2 = df2.sort_values("is_eval_paired")
+df2["probe"] = df2["probe_id"] + "+" + df2["is_eval_grouped"].astype(str)
+df2 = df2.sort_values("is_eval_grouped")
 
 sns.heatmap(
     df2.pivot(
@@ -315,7 +315,7 @@ df_subset["probe_method"] = (
     + "+"
     + df_subset["dataset_collection_id"]
     + "+"
-    + df_subset["is_eval_paired"].astype(str)
+    + df_subset["is_eval_grouped"].astype(str)
 )
 df_subset = df_subset.drop(columns=["probe_id", "dataset_collection_id"])
 
@@ -348,7 +348,7 @@ for ax in axs.flatten():
             labels.append(label)
 fig.legend(handles, labels)
 fig.tight_layout()
-df_subset[["probe_method", "eval_dataset_id", "roc_auc_score", "is_eval_paired"]]
+df_subset[["probe_method", "eval_dataset_id", "roc_auc_score", "is_eval_grouped"]]
 
 # %% plot probe performance by model size
 df_subset = df.copy()
@@ -428,8 +428,8 @@ probe_arrays_val = prepare_activations_for_probes(
 )
 probe = train_lr_probe(probe_arrays.labeled)
 print(evaluate_probe(probe, probe_arrays_val.labeled).roc_auc_score)
-assert probe_arrays.labeled_paired is not None
-probe = train_paired_lr_probe(probe_arrays.labeled_paired)
+assert probe_arrays.labeled_grouped is not None
+probe = train_grouped_lr_probe(probe_arrays.labeled_grouped)
 print(evaluate_probe(probe, probe_arrays_val.labeled).roc_auc_score)
 print(probe_arrays.activations.activations.shape)
 
@@ -467,7 +467,7 @@ print(np.cov(acts.T).flatten()[:5])
 
 probe_arrays = prepare_activations_for_probes(activations)
 probe_arrays_val = prepare_activations_for_probes(activations_val)
-probe = train_paired_lr_probe(probe_arrays.labeled_paired)
+probe = train_grouped_lr_probe(probe_arrays.labeled_grouped)
 evaluate_probe(probe, probe_arrays_val.labeled).roc_auc_score
 
 # %%

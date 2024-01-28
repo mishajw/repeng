@@ -18,8 +18,8 @@ class Activation:
 class ProbeArrays:
     activations: "ActivationArray"
     labeled: "LabeledActivationArray"
-    paired: "PairedActivationArray | None"
-    labeled_paired: "LabeledPairedActivationArray | None"
+    grouped: "GroupedActivationArray | None"
+    labeled_grouped: "LabeledGroupedActivationArray | None"
 
 
 @dataclass
@@ -34,15 +34,15 @@ class LabeledActivationArray:
 
 
 @dataclass
-class PairedActivationArray:
+class GroupedActivationArray:
     activations: Float[np.ndarray, "n d"]  # noqa: F722
-    pairs: Int64[np.ndarray, "n"]  # noqa: F821
+    groups: Int64[np.ndarray, "n"]  # noqa: F821
 
 
 @dataclass
-class LabeledPairedActivationArray:
+class LabeledGroupedActivationArray:
     activations: Float[np.ndarray, "n d"]  # noqa: F722
-    pairs: Int64[np.ndarray, "n"]  # noqa: F821
+    groups: Int64[np.ndarray, "n"]  # noqa: F821
     labels: Bool[np.ndarray, "n"]  # noqa: F821
 
 
@@ -56,28 +56,30 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
         labels=df["label"].to_numpy(),
     )
 
-    df_paired = df[df["pair_id"].notnull()]
-    if len(df_paired) == 0:
-        paired_activations = None
-        labeled_paired_activations = None
+    df_grouped = df[df["pair_id"].notnull()]
+    if len(df_grouped) == 0:
+        grouped_activations = None
+        labeled_grouped_activations = None
     else:
-        paired_activations = np.stack(df_paired["activations"].tolist())
-        pairs = (
-            df_paired["pair_id"].astype("category").cat.codes.to_numpy()  # type: ignore
+        grouped_activations = np.stack(df_grouped["activations"].tolist())
+        groups = (
+            df_grouped["pair_id"]
+            .astype("category")
+            .cat.codes.to_numpy()  # type: ignore
         )
-        paired_activations = PairedActivationArray(
-            activations=paired_activations,
-            pairs=pairs,
+        grouped_activations = GroupedActivationArray(
+            activations=grouped_activations,
+            groups=groups,
         )
-        labeled_paired_activations = LabeledPairedActivationArray(
-            activations=paired_activations.activations,
-            pairs=paired_activations.pairs,
-            labels=df_paired["label"].to_numpy(),  # type: ignore
+        labeled_grouped_activations = LabeledGroupedActivationArray(
+            activations=grouped_activations.activations,
+            groups=grouped_activations.groups,
+            labels=df_grouped["label"].to_numpy(),  # type: ignore
         )
 
     return ProbeArrays(
         activations=activation_array,
         labeled=labeled_activations,
-        paired=paired_activations,
-        labeled_paired=labeled_paired_activations,
+        grouped=grouped_activations,
+        labeled_grouped=labeled_grouped_activations,
     )

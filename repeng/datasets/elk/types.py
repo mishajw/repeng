@@ -23,7 +23,7 @@ DatasetId = Literal[
     "true_false",
 ]
 
-PairedDatasetId = Literal[
+GroupedDatasetId = Literal[
     "arc_challenge",
     "arc_easy",
     "common_sense_qa",
@@ -53,5 +53,5 @@ class InputRow(BaseModel, extra="forbid"):
     does_text_contain_true: bool
 
 
-def is_dataset_paired(dataset_id: DatasetId) -> bool:
-    return dataset_id in get_args(PairedDatasetId)
+def is_dataset_grouped(dataset_id: DatasetId) -> bool:
+    return dataset_id in get_args(GroupedDatasetId)

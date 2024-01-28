@@ -9,7 +9,7 @@ import torch
 from jaxtyping import Float
 from typing_extensions import override
 
-from repeng.activations.probe_preparations import PairedActivationArray
+from repeng.activations.probe_preparations import GroupedActivationArray
 from repeng.probes.base import BaseProbe, PredictResult
 
 
@@ -48,10 +48,10 @@ class CcsTrainingConfig:
 
 
 def train_ccs_probe(
-    activations: PairedActivationArray,
+    activations: GroupedActivationArray,
     config: CcsTrainingConfig,
 ) -> CcsProbe:
-    # TODO: Update to new paired activations format.
+    # TODO: Update to new grouped activations format.
     raise NotImplementedError()
     # _, hidden_dim = activations.activations_1.shape
     # probe = CcsProbe(hidden_dim=hidden_dim)

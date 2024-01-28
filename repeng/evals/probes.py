@@ -6,9 +6,9 @@ from pydantic import BaseModel
 
 from repeng.activations.probe_preparations import (
     LabeledActivationArray,
-    LabeledPairedActivationArray,
+    LabeledGroupedActivationArray,
 )
-from repeng.probes.base import BasePairedProbe, BaseProbe, PredictResult
+from repeng.probes.base import BaseGroupedProbe, BaseProbe, PredictResult
 
 
 class ProbeEvalResult(BaseModel, extra="forbid"):
@@ -19,25 +19,25 @@ class ProbeEvalResult(BaseModel, extra="forbid"):
     fprs: list[float]
     tprs: list[float]
     logits: list[float]
-    is_paired: bool
+    is_grouped: bool
 
 
 def evaluate_probe(
     probe: BaseProbe, activations: LabeledActivationArray
 ) -> ProbeEvalResult:
     result = probe.predict(activations.activations)
-    return _evaluate(result, activations, is_paired=False)
+    return _evaluate(result, activations, is_grouped=False)
 
 
-def evaluate_paired_probe(
-    probe: BasePairedProbe,
-    activations: LabeledPairedActivationArray,
+def evaluate_grouped_probe(
+    probe: BaseGroupedProbe,
+    activations: LabeledGroupedActivationArray,
 ) -> ProbeEvalResult:
-    result = probe.predict_paired(activations.activations, activations.pairs)
+    result = probe.predict_grouped(activations.activations, activations.groups)
     return _evaluate(
         result,
         LabeledActivationArray(activations.activations, activations.labels),
-        is_paired=True,
+        is_grouped=True,
     )
 
 
@@ -45,7 +45,7 @@ def _evaluate(
     result: PredictResult,
     activations: LabeledActivationArray,
     *,
-    is_paired: bool,
+    is_grouped: bool,
 ) -> ProbeEvalResult:
     if len(set(activations.labels)) == 1:
         warnings.warn("Only one class in labels")
@@ -57,7 +57,7 @@ def _evaluate(
             fprs=[],
             tprs=[],
             logits=[],
-            is_paired=is_paired,
+            is_grouped=is_grouped,
         )
 
     labels = activations.labels
@@ -96,5 +96,5 @@ def _evaluate(
         fprs=fpr.tolist(),
         tprs=tpr.tolist(),
         logits=result.logits.tolist(),
-        is_paired=is_paired,
+        is_grouped=is_grouped,
     )
