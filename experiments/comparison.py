@@ -26,7 +26,7 @@ from repeng.evals.probes import ProbeEvalResult, evaluate_grouped_probe, evaluat
 from repeng.models.llms import LlmId
 from repeng.models.points import get_points
 from repeng.probes.base import BaseGroupedProbe, BaseProbe
-from repeng.probes.collections import ProbeId, train_probe
+from repeng.probes.collections import ProbeMethod, train_probe
 from repeng.probes.logistic_regression import train_grouped_lr_probe, train_lr_probe
 
 assert load_dotenv()
@@ -48,7 +48,7 @@ print(set(row.split for row in activations_dataset))
 class ProbeTrainSpec:
     llm_id: LlmId
     dataset_collection_id: DatasetId | DatasetCollectionId
-    probe_id: ProbeId
+    probe_method: ProbeMethod
     point_id: str
     token_idx_from_back: int
 
@@ -84,7 +84,7 @@ dataset_collection_ids: list[DatasetId | DatasetCollectionId] = [
     "arc_challenge",
     "arc_easy",
 ]
-probe_ids: list[ProbeId] = [
+probe_methods: list[ProbeMethod] = [
     "lat",
     "mmp",
     "mmp-iid",
@@ -93,17 +93,17 @@ probe_ids: list[ProbeId] = [
 ]
 probe_train_specs = mcontext.create(
     {
-        f"{llm_id}-{dataset_collection_id}-{probe_id}-{point_id}": ProbeTrainSpec(
+        f"{llm_id}-{dataset_collection_id}-{probe_method}-{point_id}": ProbeTrainSpec(
             llm_id=llm_id,
             dataset_collection_id=dataset_collection_id,
-            probe_id=probe_id,
+            probe_method=probe_method,
             point_id=point_id,
             token_idx_from_back=1,
         )
-        for llm_id, dataset_collection_id, probe_id in itertools.product(
+        for llm_id, dataset_collection_id, probe_method in itertools.product(
             llm_ids,
             dataset_collection_ids,
-            probe_ids,
+            probe_methods,
         )
         for point_id in point_ids_by_llm[llm_id].keys()
     }
@@ -137,7 +137,7 @@ def prepare_probe_arrays(
 probes = probe_train_specs.map_cached(
     "probe_train",
     lambda _, spec: train_probe(
-        spec.probe_id,
+        spec.probe_method,
         prepare_probe_arrays(
             spec.llm_id,
             resolve_dataset_ids(spec.dataset_collection_id),
@@ -219,7 +219,7 @@ probe_eval_specs = (
 df = pd.DataFrame(
     [
         dict(
-            probe_id=row.train_spec.probe_id,
+            probe_method=row.train_spec.probe_method,
             is_grouped=row.is_grouped,
             dataset_id=row.dataset_id,
             is_dataset_grouped=is_dataset_grouped(row.dataset_id),
@@ -250,7 +250,7 @@ df["point_id"] = pd.Categorical(
     sorted(df["point_id"].unique().tolist(), key=lambda n: int(n.lstrip("p"))),
 )
 df = df.sort_values("llm_id")
-# dims = llm_id, dataset_collection_id, probe_id, point_id, eval_dataset_id
+# dims = llm_id, dataset_collection_id, probe_method, point_id, eval_dataset_id
 df  # type: ignore
 
 # %%
@@ -263,7 +263,7 @@ df2 = df2[df2["llm_id"] == "pythia-1b"]
 g = sns.FacetGrid(
     df2,
     col="eval_dataset_id",
-    row="probe_id",
+    row="probe_method",
     # margin_titles=True,
 )
 g.map(sns.barplot, "dataset_collection_id", "roc_auc_score")
@@ -286,7 +286,7 @@ df2 = df2[
         ]
     )
 ]
-df2["probe"] = df2["probe_id"] + "+" + df2["is_eval_grouped"].astype(str)
+df2["probe"] = df2["probe_method"] + "+" + df2["is_eval_grouped"].astype(str)
 df2 = df2.sort_values("is_eval_grouped")
 
 sns.heatmap(
@@ -310,33 +310,33 @@ df_subset = df_subset[df_subset["point_id"] == "p90"]
 df_subset = df_subset.drop(columns=["point_id"])
 df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
 df_subset = df_subset.drop(columns=["llm_id"])  # type: ignore
-df_subset["probe_method"] = (
-    df_subset["probe_id"]
+df_subset["probe"] = (
+    df_subset["probe_method"]
     + "+"
     + df_subset["dataset_collection_id"]
     + "+"
     + df_subset["is_eval_grouped"].astype(str)
 )
-df_subset = df_subset.drop(columns=["probe_id", "dataset_collection_id"])
+df_subset = df_subset.drop(columns=["probe_method", "dataset_collection_id"])
 
 
 fig, axs = plt.subplots(nrows=4, ncols=4, figsize=(4 * 5, 4 * 5))
 df_subset = df_subset.sort_values("eval_dataset_id")  # type: ignore
 for eval_dataset_id, ax in zip(df_subset["eval_dataset_id"].unique(), axs.flatten()):
     ax.set_title(eval_dataset_id)
-    for probe_method in (
-        df_subset[df_subset["eval_dataset_id"] == eval_dataset_id]["probe_method"]
+    for probe in (
+        df_subset[df_subset["eval_dataset_id"] == eval_dataset_id]["probe"]
         .unique()
         .tolist()
     ):
         df_row = df_subset[
             (df_subset["eval_dataset_id"] == eval_dataset_id)
-            & (df_subset["probe_method"] == probe_method)
+            & (df_subset["probe"] == probe)
         ].iloc[0]
         ax.plot(
             df_row["fprs"],
             df_row["tprs"],
-            label=probe_method,
+            label=probe,
         )
         ax.plot([0, 1], [0, 1], linestyle="--", color="gray")
 
@@ -348,13 +348,13 @@ for ax in axs.flatten():
             labels.append(label)
 fig.legend(handles, labels)
 fig.tight_layout()
-df_subset[["probe_method", "eval_dataset_id", "roc_auc_score", "is_eval_grouped"]]
+df_subset[["probe", "eval_dataset_id", "roc_auc_score", "is_eval_grouped"]]
 
 # %% plot probe performance by model size
 df_subset = df.copy()
 df_subset = df_subset[df_subset["point_id"] == "p90"]
-df_subset = df_subset[df_subset["probe_id"] == "mmp"]
-df_subset = df_subset.drop(columns=["point_id", "probe_id"])
+df_subset = df_subset[df_subset["probe_method"] == "mmp"]
+df_subset = df_subset.drop(columns=["point_id", "probe_method"])
 g = (
     sns.FacetGrid(
         df_subset,
@@ -377,7 +377,7 @@ df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry_of_truth-c
 df_subset = df_subset[df_subset["point_id"] == "p100"]
 sns.barplot(
     data=df_subset,
-    x="probe_id",
+    x="probe_method",
     y="roc_auc_score",
     hue="eval_dataset_id",
     legend=False,
@@ -387,7 +387,7 @@ sns.barplot(
 df_subset = df.copy()
 df_subset = df_subset[df_subset["llm_id"] == "pythia-1b"]
 df_subset = df_subset[df_subset["point_id"] == "p90"]
-df_subset = df_subset[df_subset["probe_id"] == "lr"]
+df_subset = df_subset[df_subset["probe_method"] == "lr"]
 df_subset = df_subset.pivot(
     index="dataset_collection_id",
     columns="eval_dataset_id",

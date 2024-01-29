@@ -27,7 +27,7 @@ from repeng.evals.probes import evaluate_probe
 from repeng.models.loading import load_llm_oioo
 from repeng.models.points import get_points
 from repeng.models.types import LlmId
-from repeng.probes.collections import ProbeId, train_probe
+from repeng.probes.collections import ProbeMethod, train_probe
 from repeng.probes.logistic_regression import train_lr_probe
 
 # %%
@@ -327,25 +327,25 @@ probe_arrays_val = prepare_activations_for_probes(
     ]
 )
 
-probe_ids: list[ProbeId] = ["lat", "mmp", "lr"]
+probe_methods: list[ProbeMethod] = ["lat", "mmp", "lr"]
 df_eval = pd.DataFrame(
     [
         dict(
-            probe_id=probe_id,
+            probe_method=probe_method,
             **evaluate_probe(
-                train_probe(probe_id, probe_arrays), probe_arrays_val.labeled
+                train_probe(probe_method, probe_arrays), probe_arrays_val.labeled
             ).model_dump(),
         )
-        for probe_id in probe_ids
+        for probe_method in probe_methods
     ],
 )
-df_eval[["probe_id", "f1_score", "precision", "recall", "roc_auc_score"]]
+df_eval[["probe_method", "f1_score", "precision", "recall", "roc_auc_score"]]
 
 # %% plot ROC curves
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
 for ax, row in zip(axs, df_eval.itertuples()):
     ax.plot(row.fprs, row.tprs)
-    ax.set_title(row.probe_id)
+    ax.set_title(row.probe_method)
 
 # %%
 np.std([np.array([1, 2, 3]), np.array([1, 2, 3])], axis=0)
