@@ -47,7 +47,7 @@ print(set(row.split for row in activations_dataset))
 @dataclass
 class ProbeTrainSpec:
     llm_id: LlmId
-    dataset_collection_id: DatasetId | DatasetCollectionId
+    train_dataset_id: DatasetId | DatasetCollectionId
     probe_method: ProbeMethod
     point_id: str
     token_idx_from_back: int
@@ -75,8 +75,8 @@ point_ids_by_llm = {
 dataset_collection_ids: list[DatasetId | DatasetCollectionId] = [
     "repe",
     "geometry_of_truth",
-    "geometry_of_truth-cities",
-    "geometry_of_truth-neg_cities",
+    "geometry_of_truth/cities",
+    "geometry_of_truth/neg_cities",
     "geometry_of_truth/cities_with_neg",
     "open_book_qa",
     "common_sense_qa",
@@ -93,14 +93,14 @@ probe_methods: list[ProbeMethod] = [
 ]
 probe_train_specs = mcontext.create(
     {
-        f"{llm_id}-{dataset_collection_id}-{probe_method}-{point_id}": ProbeTrainSpec(
+        f"{llm_id}-{train_dataset_id}-{probe_method}-{point_id}": ProbeTrainSpec(
             llm_id=llm_id,
-            dataset_collection_id=dataset_collection_id,
+            train_dataset_id=train_dataset_id,
             probe_method=probe_method,
             point_id=point_id,
             token_idx_from_back=1,
         )
-        for llm_id, dataset_collection_id, probe_method in itertools.product(
+        for llm_id, train_dataset_id, probe_method in itertools.product(
             llm_ids,
             dataset_collection_ids,
             probe_methods,
@@ -140,7 +140,7 @@ probes = probe_train_specs.map_cached(
         spec.probe_method,
         prepare_probe_arrays(
             spec.llm_id,
-            resolve_dataset_ids(spec.dataset_collection_id),
+            resolve_dataset_ids(spec.train_dataset_id),
             split="train",
             point_name=point_ids_by_llm[spec.llm_id][spec.point_id],
             token_idx_from_back=spec.token_idx_from_back,
@@ -250,7 +250,7 @@ df["point_id"] = pd.Categorical(
     sorted(df["point_id"].unique().tolist(), key=lambda n: int(n.lstrip("p"))),
 )
 df = df.sort_values("llm_id")
-# dims = llm_id, dataset_collection_id, probe_method, point_id, eval_dataset_id
+# dims = llm_id, train_dataset_id, probe_method, point_id, eval_dataset_id
 df  # type: ignore
 
 # %%
@@ -258,7 +258,7 @@ df2 = df.copy()
 df2 = df2[df2["point_id"] == "p90"]
 df2 = df2[df2["llm_id"] == "pythia-1b"]
 # df2 = df2[df2["eval_dataset_id"].str.startswith("arc")]
-# df2 = df2[df2["dataset_collection_id"].str.startswith("arc")]
+# df2 = df2[df2["train_dataset_id"].str.startswith("arc")]
 
 g = sns.FacetGrid(
     df2,
@@ -266,7 +266,7 @@ g = sns.FacetGrid(
     row="probe_method",
     # margin_titles=True,
 )
-g.map(sns.barplot, "dataset_collection_id", "roc_auc_score")
+g.map(sns.barplot, "train_dataset_id", "roc_auc_score")
 plt.tight_layout()
 
 # %%
@@ -275,7 +275,7 @@ df2 = df2[df2["point_id"] == "p90"]
 df2 = df2[df2["llm_id"] == "pythia-6.9b"]
 df2 = df2[df2["eval_dataset_id"] == "truthful_qa"]
 df2 = df2[
-    df2["dataset_collection_id"].isin(
+    df2["train_dataset_id"].isin(
         [
             "geometry_of_truth",
             "geometry_of_truth/cities_with_neg",
@@ -291,7 +291,7 @@ df2 = df2.sort_values("is_eval_grouped")
 
 sns.heatmap(
     df2.pivot(
-        index="dataset_collection_id",
+        index="train_dataset_id",
         columns="probe",
         values="roc_auc_score",
     ),
@@ -304,7 +304,7 @@ sns.heatmap(
 # %% plot ROC curves
 df_subset = df.copy()
 df_subset = df_subset[
-    df_subset["dataset_collection_id"] == "common_sense_qa"
+    df_subset["train_dataset_id"] == "common_sense_qa"
 ]  # TODO: remove
 df_subset = df_subset[df_subset["point_id"] == "p90"]
 df_subset = df_subset.drop(columns=["point_id"])
@@ -313,11 +313,11 @@ df_subset = df_subset.drop(columns=["llm_id"])  # type: ignore
 df_subset["probe"] = (
     df_subset["probe_method"]
     + "+"
-    + df_subset["dataset_collection_id"]
+    + df_subset["train_dataset_id"]
     + "+"
     + df_subset["is_eval_grouped"].astype(str)
 )
-df_subset = df_subset.drop(columns=["probe_method", "dataset_collection_id"])
+df_subset = df_subset.drop(columns=["probe_method", "train_dataset_id"])
 
 
 fig, axs = plt.subplots(nrows=4, ncols=4, figsize=(4 * 5, 4 * 5))
@@ -359,7 +359,7 @@ g = (
     sns.FacetGrid(
         df_subset,
         col="eval_dataset_id",
-        hue="dataset_collection_id",
+        hue="train_dataset_id",
         margin_titles=True,
     )
     .map(sns.lineplot, "llm_id", "roc_auc_score")
@@ -373,7 +373,7 @@ plt.show()
 # %%
 df_subset = df.copy()
 df_subset = df_subset[df_subset["llm_id"] == "pythia-6.9b"]
-df_subset = df_subset[df_subset["dataset_collection_id"] == "geometry_of_truth-cities"]
+df_subset = df_subset[df_subset["train_dataset_id"] == "geometry_of_truth-cities"]
 df_subset = df_subset[df_subset["point_id"] == "p100"]
 sns.barplot(
     data=df_subset,
@@ -389,12 +389,12 @@ df_subset = df_subset[df_subset["llm_id"] == "pythia-1b"]
 df_subset = df_subset[df_subset["point_id"] == "p90"]
 df_subset = df_subset[df_subset["probe_method"] == "lr"]
 df_subset = df_subset.pivot(
-    index="dataset_collection_id",
+    index="train_dataset_id",
     columns="eval_dataset_id",
     values="roc_auc_score",
 )
 df_subset = df_subset.sort_index(level=0)
-df_subset = df_subset.sort_values("dataset_collection_id")
+df_subset = df_subset.sort_values("train_dataset_id")
 sns.heatmap(df_subset, annot=True, fmt=".2f", cmap="Blues")
 
 # %%
