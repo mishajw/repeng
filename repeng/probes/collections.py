@@ -3,10 +3,7 @@ from typing import Literal
 from repeng.activations.probe_preparations import ProbeArrays
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
-from repeng.probes.linear_artificial_tomography import (
-    LatTrainingConfig,
-    train_lat_probe,
-)
+from repeng.probes.linear_artificial_tomography import train_lat_probe
 from repeng.probes.logistic_regression import train_grouped_lr_probe, train_lr_probe
 from repeng.probes.mean_mass_probe import train_mmp_probe
 
@@ -26,7 +23,6 @@ def train_probe(
     elif probe_method == "lat":
         return train_lat_probe(
             probe_arrays.activations,
-            LatTrainingConfig(),
         )
     elif probe_method == "mmp":
         return train_mmp_probe(
