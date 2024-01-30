@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar, get_args
 
 from transformers import PreTrainedModel, PreTrainedTokenizerFast
 
@@ -49,3 +49,12 @@ class Llm(Generic[_ModelT, _TokenizerT]):
     model: _ModelT
     tokenizer: _TokenizerT
     points: list[Point[_ModelT]]
+
+
+def is_llm_id(llm_id: str) -> bool:
+    return llm_id in {
+        *get_args(PythiaId),
+        *get_args(PythiaDpoId),
+        *get_args(Gpt2Id),
+        *get_args(Llama2Id),
+    }

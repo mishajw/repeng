@@ -1,6 +1,6 @@
 from typing import Literal, cast, get_args
 
-from repeng.models.types import LlmId
+from repeng.models.types import LlmId, is_llm_id
 
 LlmCollectionId = Literal[
     "pythia",
@@ -12,7 +12,7 @@ LlmCollectionId = Literal[
 def resolve_llm_ids(llm_collection_id: LlmCollectionId | LlmId) -> list[LlmId]:
     if llm_collection_id in get_args(LlmCollectionId):
         return _get_llm_collection(cast(LlmCollectionId, llm_collection_id))
-    elif llm_collection_id in get_args(LlmId):
+    elif is_llm_id(llm_collection_id):
         return [cast(LlmId, llm_collection_id)]
     else:
         raise ValueError(f"Unknown LLM collection ID: {llm_collection_id}")
