@@ -79,7 +79,6 @@ def _get_dlk_dataset(
                 prompt = _get_prompt(
                     template,
                     {**row, "label": answer_choice_int},
-                    use_new_line=dataset_spec.use_new_line,
                 )
                 results[
                     f"{dataset_id}-{template_name}-{row_idx}-{answer_choice_int}"
