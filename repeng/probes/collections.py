@@ -14,10 +14,11 @@ def train_probe(
     probe_method: ProbeMethod, probe_arrays: ProbeArrays
 ) -> BaseProbe | None:
     if probe_method == "ccs":
-        if probe_arrays.grouped is None:
+        if probe_arrays.labeled_grouped is None:
             return None
         return train_ccs_probe(
-            probe_arrays.grouped,
+            # N.B.: Technically unsupervised!
+            probe_arrays.labeled_grouped,
             CcsTrainingConfig(),
         )
     elif probe_method == "lat":
