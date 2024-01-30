@@ -4,6 +4,7 @@ from tqdm import tqdm
 
 from repeng.datasets.elk.arc import get_arc
 from repeng.datasets.elk.common_sense_qa import get_common_sense_qa
+from repeng.datasets.elk.dlk import get_dlk_dataset
 from repeng.datasets.elk.geometry_of_truth import get_geometry_of_truth
 from repeng.datasets.elk.open_book_qa import get_open_book_qa
 from repeng.datasets.elk.race import get_race
@@ -17,6 +18,7 @@ DatasetCollectionId = Literal[
     "repe",
     "geometry_of_truth",
     "geometry_of_truth/cities_with_neg",
+    "dlk",
 ]
 
 
@@ -43,6 +45,17 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
         "geometry_of_truth/cities",
         "geometry_of_truth/neg_cities",
     ],
+    "dlk": [
+        "imdb",
+        "amazon_polarity",
+        "ag_news",
+        "dbpedia_14",
+        "rte",
+        "qnli",
+        "copa",
+        "boolq",
+        "piqa",
+    ],
 }
 
 _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
@@ -68,6 +81,15 @@ _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
     "truthful_qa": lambda: get_truthful_qa(),
     "truthful_model_written": lambda: get_truthful_model_written(),
     "true_false": get_true_false_dataset,
+    "imdb": lambda: get_dlk_dataset("imdb"),
+    "amazon_polarity": lambda: get_dlk_dataset("amazon_polarity"),
+    "ag_news": lambda: get_dlk_dataset("ag_news"),
+    "dbpedia_14": lambda: get_dlk_dataset("dbpedia_14"),
+    "rte": lambda: get_dlk_dataset("rte"),
+    "qnli": lambda: get_dlk_dataset("qnli"),
+    "copa": lambda: get_dlk_dataset("copa"),
+    "boolq": lambda: get_dlk_dataset("boolq"),
+    "piqa": lambda: get_dlk_dataset("piqa"),
 }
 
 

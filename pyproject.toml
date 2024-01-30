@@ -21,10 +21,11 @@ jaxtyping = "^0.2.25"
 fire = "^0.5.0"
 accelerate = "^0.26.1"
 plotly = "^5.18.0"
+promptsource = { git = "https://github.com/bigscience-workshop/promptsource", branch = "main" }
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.28.0"
-black = "^23.12.1"
+black = "^21.0.0"
 pre-commit = "^3.6.0"
 jupyter = "^1.0.0"
 pyright = "^1.1.347"

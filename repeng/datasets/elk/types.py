@@ -21,6 +21,27 @@ DatasetId = Literal[
     "truthful_qa",
     "truthful_model_written",
     "true_false",
+    "imdb",
+    "amazon_polarity",
+    "ag_news",
+    "dbpedia_14",
+    "rte",
+    "qnli",
+    "copa",
+    "boolq",
+    "piqa",
+]
+
+DlkDatasetId = Literal[
+    "imdb",
+    "amazon_polarity",
+    "ag_news",
+    "dbpedia_14",
+    "rte",
+    "qnli",
+    "copa",
+    "boolq",
+    "piqa",
 ]
 
 GroupedDatasetId = Literal[
@@ -43,6 +64,7 @@ class BinaryRow(BaseModel, extra="forbid"):
     format_args: dict[str, str]
     format_style: Literal["lat", "misc"]
     pair_id: str | None = None
+    template_name: str | None = None
 
 
 # deprecated
