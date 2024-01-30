@@ -111,8 +111,9 @@ def resolve_dataset_ids(
 
 
 def get_datasets(dataset_ids: list[DatasetId]) -> dict[str, BinaryRow]:
-    return {
-        k: v
-        for dataset_id in tqdm(dataset_ids, desc="loading datasets")
-        for k, v in _DATASET_FNS[dataset_id]().items()
-    }
+    result = {}
+    pbar = tqdm(dataset_ids, desc="loading datasets")
+    for dataset_id in pbar:
+        pbar.set_postfix(dataset=dataset_id)
+        result.update(_DATASET_FNS[dataset_id]())
+    return result

@@ -7,8 +7,6 @@ from promptsource.templates import DatasetTemplates, Template
 from repeng.datasets.elk.types import BinaryRow, DlkDatasetId, Split
 from repeng.datasets.utils.shuffles import deterministic_shuffle
 
-_LIMIT = 3000
-
 
 @dataclass
 class _DatasetSpec:
@@ -47,8 +45,10 @@ def get_dlk_dataset(dataset_id: DlkDatasetId):
         else f"{dataset_spec.name}/{dataset_spec.subset}"
     )
     return {
-        **_get_dlk_dataset(dataset_id, dataset, templates, split="train"),
-        **_get_dlk_dataset(dataset_id, dataset, templates, split="validation"),
+        **_get_dlk_dataset(dataset_id, dataset, templates, split="train", limit=600),
+        **_get_dlk_dataset(
+            dataset_id, dataset, templates, split="validation", limit=400
+        ),
     }
 
 
@@ -57,6 +57,7 @@ def _get_dlk_dataset(
     dataset: Any,
     templates: DatasetTemplates,
     split: Split,
+    limit: int,
 ) -> dict[str, BinaryRow]:
     dataset_spec = _DATASET_SPECS[dataset_id]
     if split == "train":
@@ -69,7 +70,7 @@ def _get_dlk_dataset(
     results = {}
     for row_idx, row in deterministic_shuffle(
         enumerate(dataset[hf_split]), lambda row: str(row[0])
-    )[:_LIMIT]:
+    )[:limit]:
         assert "label" in row and type(row["label"]) == int, row
         template_names = _DATASET_TEMPLATE_NAMES[dataset_id]
         for template_name in template_names:
@@ -81,11 +82,18 @@ def _get_dlk_dataset(
                     template,
                     {**row, "label": answer_choice_int},
                 )
-                results[
-                    f"{dataset_id}-{template_name}-{row_idx}-{answer_choice_int}"
-                ] = BinaryRow(
+                key = "-".join(
+                    [
+                        dataset_id,
+                        template_name,
+                        str(row_idx),
+                        str(answer_choice_int),
+                        split,
+                    ]
+                )
+                results[key] = BinaryRow(
                     dataset_id=dataset_id,
-                    split="train",
+                    split=split,
                     pair_id=str(row_idx),
                     text=prompt,
                     is_true=row["label"] == answer_choice_int,
