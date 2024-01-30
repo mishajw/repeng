@@ -36,7 +36,7 @@ _DATASET_SPECS: dict[DlkDatasetId, _DatasetSpec] = {
 }
 
 
-def get_dlk_dataset(dataset_id: DlkDatasetId):
+def get_dlk_dataset(dataset_id: DlkDatasetId, vary_templates: bool):
     dataset_spec = _DATASET_SPECS[dataset_id]
     dataset: Any = load_dataset(dataset_spec.name, dataset_spec.subset)
     templates = DatasetTemplates(
@@ -45,9 +45,21 @@ def get_dlk_dataset(dataset_id: DlkDatasetId):
         else f"{dataset_spec.name}/{dataset_spec.subset}"
     )
     return {
-        **_get_dlk_dataset(dataset_id, dataset, templates, split="train", limit=600),
         **_get_dlk_dataset(
-            dataset_id, dataset, templates, split="validation", limit=400
+            dataset_id,
+            dataset,
+            templates,
+            split="train",
+            limit=600,
+            vary_templates=vary_templates,
+        ),
+        **_get_dlk_dataset(
+            dataset_id,
+            dataset,
+            templates,
+            split="validation",
+            limit=400,
+            vary_templates=vary_templates,
         ),
     }
 
@@ -58,6 +70,7 @@ def _get_dlk_dataset(
     templates: DatasetTemplates,
     split: Split,
     limit: int,
+    vary_templates: bool,
 ) -> dict[str, BinaryRow]:
     dataset_spec = _DATASET_SPECS[dataset_id]
     if split == "train":
@@ -73,6 +86,8 @@ def _get_dlk_dataset(
     )[:limit]:
         assert "label" in row and type(row["label"]) == int, row
         template_names = _DATASET_TEMPLATE_NAMES[dataset_id]
+        if not vary_templates:
+            template_names = [template_names[0]]
         for template_name in template_names:
             template = templates.templates[templates.name_to_id_mapping[template_name]]
             answer_choice_strs = template.get_answer_choices_list(row)
