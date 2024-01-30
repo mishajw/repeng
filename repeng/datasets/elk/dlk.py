@@ -7,6 +7,8 @@ from promptsource.templates import DatasetTemplates, Template
 from repeng.datasets.elk.types import BinaryRow, DlkDatasetId, Split
 from repeng.datasets.utils.shuffles import deterministic_shuffle
 
+_LIMIT = 3000
+
 
 @dataclass
 class _DatasetSpec:
@@ -67,7 +69,7 @@ def _get_dlk_dataset(
     results = {}
     for row_idx, row in deterministic_shuffle(
         enumerate(dataset[hf_split]), lambda row: str(row[0])
-    ):
+    )[:_LIMIT]:
         assert "label" in row and type(row["label"]) == int, row
         template_names = _DATASET_TEMPLATE_NAMES[dataset_id]
         for template_name in template_names:
