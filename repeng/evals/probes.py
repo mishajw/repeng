@@ -1,100 +1,62 @@
-import warnings
-from typing import cast
-
-import sklearn.metrics
-from pydantic import BaseModel
-
 from repeng.activations.probe_preparations import (
     LabeledActivationArray,
     LabeledGroupedActivationArray,
 )
-from repeng.probes.base import BaseGroupedProbe, BaseProbe, PredictResult
+from repeng.evals.logits import (
+    LabeledGroupedLogits,
+    LabeledLogits,
+    eval_logits_by_question,
+    eval_logits_by_row,
+)
+from repeng.evals.types import QuestionsEvalResult, RowsEvalResult
+from repeng.probes.base import BaseProbe
 
 
-class ProbeEvalResult(BaseModel, extra="forbid"):
-    f1_score: float
-    precision: float
-    recall: float
-    roc_auc_score: float
-    fprs: list[float]
-    tprs: list[float]
-    logits: list[float]
-    is_grouped: bool
-
-
-def evaluate_probe(
+def eval_probe_by_row(
     probe: BaseProbe, activations: LabeledActivationArray
-) -> ProbeEvalResult:
+) -> RowsEvalResult:
     result = probe.predict(activations.activations)
-    return _evaluate(result, activations, is_grouped=False)
-
-
-def evaluate_grouped_probe(
-    probe: BaseGroupedProbe,
-    activations: LabeledGroupedActivationArray,
-) -> ProbeEvalResult:
-    result = probe.predict_grouped(activations.activations, activations.groups)
-    return _evaluate(
-        result,
-        LabeledActivationArray(activations.activations, activations.labels),
-        is_grouped=True,
-    )
-
-
-def _evaluate(
-    result: PredictResult,
-    activations: LabeledActivationArray,
-    *,
-    is_grouped: bool,
-) -> ProbeEvalResult:
-    if len(set(activations.labels)) == 1:
-        warnings.warn("Only one class in labels")
-        return ProbeEvalResult(
-            f1_score=0.0,
-            precision=0.0,
-            recall=0.0,
-            roc_auc_score=0.0,
-            fprs=[],
-            tprs=[],
-            logits=[],
-            is_grouped=is_grouped,
+    eval_result = eval_logits_by_row(
+        LabeledLogits(
+            logits=result.logits,
+            labels=activations.labels,
         )
+    )
+    eval_result_flipped = eval_logits_by_row(
+        LabeledLogits(
+            logits=-result.logits,
+            labels=activations.labels,
+        )
+    )
+    if eval_result.accuracy < eval_result_flipped.accuracy:
+        return eval_result_flipped.model_copy(is_flipped=True)
+    else:
+        return eval_result
 
-    labels = activations.labels
-    if cast(float, sklearn.metrics.roc_auc_score(labels, result.logits)) < 0.5:
-        # TODO: Is this correct?
-        result.logits = -result.logits
-        result.labels = ~result.labels
-    f1_score = sklearn.metrics.f1_score(
-        labels,
-        result.labels,
-        zero_division=0,  # type: ignore
+
+def eval_probe_by_question(
+    probe: BaseProbe,
+    activations: LabeledGroupedActivationArray,
+) -> QuestionsEvalResult:
+    result = probe.predict(activations.activations)
+    eval_result = eval_logits_by_question(
+        LabeledGroupedLogits(
+            logits=result.logits,
+            labels=activations.labels,
+            groups=activations.groups,
+        )
     )
-    precision = sklearn.metrics.precision_score(
-        labels,
-        result.labels,
-        zero_division=0,  # type: ignore
+    eval_result_flipped = eval_logits_by_question(
+        LabeledGroupedLogits(
+            logits=-result.logits,
+            labels=activations.labels,
+            groups=activations.groups,
+        )
     )
-    recall = sklearn.metrics.recall_score(
-        labels,
-        result.labels,
-        zero_division=0,  # type: ignore
-    )
-    roc_auc_score = sklearn.metrics.roc_auc_score(labels, result.logits)
-    fpr, tpr, _ = sklearn.metrics.roc_curve(labels, result.logits)
-    assert (
-        isinstance(f1_score, float)
-        and isinstance(precision, float)
-        and isinstance(recall, float)
-        and isinstance(roc_auc_score, float)
-    )
-    return ProbeEvalResult(
-        f1_score=f1_score,
-        precision=precision,
-        recall=recall,
-        roc_auc_score=roc_auc_score,
-        fprs=fpr.tolist(),
-        tprs=tpr.tolist(),
-        logits=result.logits.tolist(),
-        is_grouped=is_grouped,
-    )
+    if eval_result.accuracy < eval_result_flipped.accuracy:
+        return QuestionsEvalResult(
+            accuracy=eval_result_flipped.accuracy,
+            is_flipped=True,
+        )
+    else:
+        return eval_result
