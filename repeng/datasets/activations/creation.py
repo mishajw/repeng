@@ -14,8 +14,6 @@ from repeng.models.loading import load_llm_oioo
 
 assert load_dotenv()
 
-_LAST_N_TOKENS = 3
-
 
 class BinaryRowWithLlm(BinaryRow):
     llm_id: LlmId
@@ -28,6 +26,9 @@ def create_activations_dataset(
     num_samples_per_dataset: int,
     num_validation_samples_per_dataset: int,
     device: torch.device,
+    num_tokens_from_end: int | None,
+    layers_start: int | None,
+    layers_end: int | None,
 ) -> list[ActivationResultRow]:
     mcontext = MContext(Path("output/create-activations-dataset"))
     inputs = (
@@ -61,7 +62,9 @@ def create_activations_dataset(
                     dtype=torch.bfloat16,
                 ),
                 text=value.text,
-                last_n_tokens=_LAST_N_TOKENS,
+                last_n_tokens=num_tokens_from_end,
+                points_start=layers_start,
+                points_end=layers_end,
             ),
             to="pickle",
         )

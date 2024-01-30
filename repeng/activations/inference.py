@@ -1,5 +1,6 @@
 from typing import TypeVar
 
+import numpy as np
 import torch
 from pydantic import BaseModel
 from transformers import PreTrainedModel, PreTrainedTokenizerFast
@@ -26,16 +27,19 @@ def get_model_activations(
     llm: Llm[ModelT, PreTrainedTokenizerFast],
     *,
     text: str,
-    last_n_tokens: int,
+    last_n_tokens: int | None,
+    points_start: int | None = None,
+    points_end: int | None = None,
 ) -> ActivationRow:
-    assert last_n_tokens > 0, last_n_tokens
+    assert last_n_tokens is None or last_n_tokens > 0, last_n_tokens
 
     tokens = llm.tokenizer.encode(text)
     tokens_str = llm.tokenizer.tokenize(text)
     tokens = llm.tokenizer.convert_tokens_to_ids(tokens_str)
     tokens = torch.tensor([tokens], device=next(llm.model.parameters()).device)
 
-    with grab_many(llm.model, llm.points) as activation_fn:
+    points = llm.points[points_start:points_end]
+    with grab_many(llm.model, points) as activation_fn:
         output = llm.model.forward(tokens)
         logits: torch.Tensor = output.logits
         layer_activations = activation_fn()
@@ -47,11 +51,17 @@ def get_model_activations(
         logprobs_shifted.gather(dim=-1, index=tokens_shifted).squeeze(0).detach()
     )
 
+    def get_activation(activations: torch.Tensor) -> np.ndarray:
+        activations = activations.float().squeeze(0)
+        if last_n_tokens is not None:
+            activations = activations[-last_n_tokens:]
+        return activations.detach().cpu().numpy()
+
     return ActivationRow(
         text=text,
         text_tokenized=tokens_str,
         activations={
-            name: activations.float().squeeze(0)[-last_n_tokens:].detach().cpu().numpy()
+            name: get_activation(activations)
             for name, activations in layer_activations.items()
         },
         token_logprobs=token_logprobs.float().cpu().numpy(),

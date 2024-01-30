@@ -6,6 +6,7 @@ LlmCollectionId = Literal[
     "pythia",
     "pythia-tiny",
     "pythia-rtx3090",
+    "llama-13b-and-pythia-12b",
 ]
 
 
@@ -44,6 +45,11 @@ def _get_llm_collection(llm_collection_id: LlmCollectionId) -> list[LlmId]:
             "pythia-1.4b",
             "pythia-2.8b",
             "pythia-6.9b",
+        ]
+    elif llm_collection_id == "llama-13b-and-pythia-12b":
+        return [
+            "Llama-2-13b-chat-hf",
+            "pythia-12b",
         ]
     else:
         raise ValueError(f"Unknown LLM collection ID: {llm_collection_id}")

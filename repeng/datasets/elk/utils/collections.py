@@ -18,6 +18,7 @@ DatasetCollectionId = Literal[
     "repe",
     "geometry_of_truth",
     "dlk",
+    "small-varied",
 ]
 
 
@@ -47,6 +48,12 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
         "copa",
         "boolq",
         "piqa",
+    ],
+    "small-varied": [
+        "common_sense_qa",
+        "imdb",
+        "geometry_of_truth/cities",
+        "arc_easy",
     ],
 }
 

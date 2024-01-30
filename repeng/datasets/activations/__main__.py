@@ -18,10 +18,11 @@ def main(
     datasets: DatasetCollectionId | DatasetId,
     device: str,
     num_samples_per_dataset: int,
-    num_validation_samples_per_dataset: int | None = None,
+    num_validation_samples_per_dataset: int,
+    num_tokens_from_end: int | None = None,
+    layers_start: int | None = None,
+    layers_end: int | None = None,
 ):
-    if num_validation_samples_per_dataset is None:
-        num_validation_samples_per_dataset = num_samples_per_dataset // 5
     # 25GB for model weights (+25GB for pythia-12b)
     # 50GB for activations dataset
     # 35GB for pre-upload dataset
@@ -32,6 +33,9 @@ def main(
         num_samples_per_dataset=num_samples_per_dataset,
         num_validation_samples_per_dataset=num_validation_samples_per_dataset,
         device=torch.device(device),
+        num_tokens_from_end=num_tokens_from_end,
+        layers_start=layers_start,
+        layers_end=layers_end,
     )
 
 
