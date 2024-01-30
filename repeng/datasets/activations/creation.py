@@ -8,7 +8,7 @@ from repeng.activations.inference import get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
 from repeng.datasets.elk.types import BinaryRow, DatasetId
 from repeng.datasets.elk.utils.collections import get_datasets
-from repeng.datasets.elk.utils.filters import limit_dataset_and_split_fn
+from repeng.datasets.elk.utils.limits import limit_dataset_and_split_fn
 from repeng.models.llms import LlmId
 from repeng.models.loading import load_llm_oioo
 
@@ -70,6 +70,7 @@ def create_activations_dataset(
             lambda _, activations, input: ActivationResultRow(
                 dataset_id=input.dataset_id,
                 split=input.split,
+                template_name=input.template_name,
                 label=input.is_true,
                 activations=activations.activations,
                 pair_id=input.pair_id,

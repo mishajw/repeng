@@ -17,7 +17,6 @@ DatasetCollectionId = Literal[
     "all",
     "repe",
     "geometry_of_truth",
-    "geometry_of_truth/cities_with_neg",
     "dlk",
 ]
 
@@ -33,17 +32,10 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
     ],
     "geometry_of_truth": [
         "geometry_of_truth/cities",
-        "geometry_of_truth/neg_cities",
         "geometry_of_truth/sp_en_trans",
-        "geometry_of_truth/neg_sp_en_trans",
         "geometry_of_truth/larger_than",
-        "geometry_of_truth/smaller_than",
         "geometry_of_truth/cities_cities_conj",
         "geometry_of_truth/cities_cities_disj",
-    ],
-    "geometry_of_truth/cities_with_neg": [
-        "geometry_of_truth/cities",
-        "geometry_of_truth/neg_cities",
     ],
     "dlk": [
         "imdb",
@@ -60,13 +52,8 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
 
 _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
     "geometry_of_truth/cities": lambda: get_geometry_of_truth("cities"),
-    "geometry_of_truth/neg_cities": lambda: get_geometry_of_truth("neg_cities"),
     "geometry_of_truth/sp_en_trans": lambda: get_geometry_of_truth("sp_en_trans"),
-    "geometry_of_truth/neg_sp_en_trans": lambda: get_geometry_of_truth(
-        "neg_sp_en_trans"
-    ),
     "geometry_of_truth/larger_than": lambda: get_geometry_of_truth("larger_than"),
-    "geometry_of_truth/smaller_than": lambda: get_geometry_of_truth("smaller_than"),
     "geometry_of_truth/cities_cities_conj": lambda: get_geometry_of_truth(
         "cities_cities_conj"
     ),

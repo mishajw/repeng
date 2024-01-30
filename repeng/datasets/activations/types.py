@@ -8,6 +8,7 @@ from repeng.utils.pydantic_ndarray import NdArray
 class ActivationResultRow(BaseModel, extra="forbid"):
     dataset_id: DatasetId
     pair_id: str | None
+    template_name: str | None
     activations: dict[str, NdArray]  # (n, d)
     label: bool
     split: Split
