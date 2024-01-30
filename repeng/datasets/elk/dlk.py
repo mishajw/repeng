@@ -37,7 +37,6 @@ _DATASET_SPECS: dict[DlkDatasetId, _DatasetSpec] = {
 
 
 def get_dlk_dataset(dataset_id: DlkDatasetId):
-    print(dataset_id)
     dataset_spec = _DATASET_SPECS[dataset_id]
     dataset: Any = load_dataset(dataset_spec.name, dataset_spec.subset)
     templates = DatasetTemplates(
@@ -68,7 +67,7 @@ def _get_dlk_dataset(
     results = {}
     for row_idx, row in deterministic_shuffle(
         enumerate(dataset[hf_split]), lambda row: str(row[0])
-    )[:2]:
+    ):
         assert "label" in row and type(row["label"]) == int, row
         template_names = _DATASET_TEMPLATE_NAMES[dataset_id]
         for template_name in template_names:
