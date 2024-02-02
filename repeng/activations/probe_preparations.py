@@ -9,7 +9,7 @@ from jaxtyping import Bool, Float, Int64
 @dataclass
 class Activation:
     dataset_id: str
-    pair_id: str | None
+    group_id: str | None
     activations: Float[np.ndarray, "d"]  # noqa: F821
     label: bool
 
@@ -56,17 +56,17 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
         labels=df["label"].to_numpy(),
     )
 
-    df_grouped = df[df["pair_id"].notnull()]
-    group_sizes = df_grouped.groupby("pair_id").size()
+    df_grouped = df[df["group_id"].notnull()]
+    group_sizes = df_grouped.groupby("group_id").size()
     valid_groups = (group_sizes[group_sizes > 1]).index  # type: ignore
-    df_grouped = df_grouped[df_grouped["pair_id"].isin(valid_groups)]  # type: ignore
+    df_grouped = df_grouped[df_grouped["group_id"].isin(valid_groups)]  # type: ignore
     if len(df_grouped) == 0:
         grouped_activations = None
         labeled_grouped_activations = None
     else:
         grouped_activations = np.stack(df_grouped["activations"].tolist())
         groups = (
-            df_grouped["pair_id"]
+            df_grouped["group_id"]
             .astype("category")
             .cat.codes.to_numpy()  # type: ignore
         )

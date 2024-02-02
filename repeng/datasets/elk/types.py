@@ -60,16 +60,23 @@ class BinaryRow(BaseModel, extra="forbid"):
     is_true: bool
     format_args: dict[str, str]
     format_style: Literal["lat", "misc"]
-    pair_id: str | None = None
+    group_id: str | None = None
+    """
+    Rows are grouped, for example by question, in order to allow for probes that take
+    into account intra-group relationships.
+    """
     template_name: str | None = None
-
-
-# deprecated
-class InputRow(BaseModel, extra="forbid"):
-    pair_idx: str
-    text: str
-    is_text_true: bool
-    does_text_contain_true: bool
+    """
+    The name of the template used in the generation of this row.
+    If not set, typically there are no alternative templates for the row.
+    """
+    answer_type: str | None = None
+    """
+    For example, 'true' and 'false' for answers to true/false questions, or 'A', 'B',
+    'C', or 'D' for multiple choice questions.
+    If not set, the prompt template doesn't include any consistent answer templates
+    (e.g. it's just question-answer).
+    """
 
 
 def is_dataset_grouped(dataset_id: DatasetId) -> bool:

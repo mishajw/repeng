@@ -70,7 +70,7 @@ def _get_paired(
         for label, row in [("pos", row1), ("neg", row2)]:
             result[f"{dataset_id}-{index}-{label}"] = BinaryRow(
                 dataset_id=dataset_id,
-                pair_id=str(index),
+                group_id=str(index),
                 split=get_split(dataset_id, str(index)),
                 text=cast(str, row["statement"]),
                 is_true=row["label"] == 1,

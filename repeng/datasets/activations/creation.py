@@ -77,7 +77,7 @@ def create_activations_dataset(
                 label=input.is_true,
                 activations=activations.activations,
                 prompt_logprobs=activations.token_logprobs.sum().item(),
-                pair_id=input.pair_id,
+                pair_id=input.group_id,
                 llm_id=input.llm_id,
             ),
         )

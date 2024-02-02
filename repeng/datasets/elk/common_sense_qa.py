@@ -27,15 +27,15 @@ def _get_common_sense_qa_split(split: Split) -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("commonsense_qa")
     results = {}
     for row in deterministic_shuffle(dataset[split], lambda row: row["id"]):
-        pair_id = row["id"]
+        group_id = row["id"]
         for choice, choice_label in zip(
             row["choices"]["text"], row["choices"]["label"], strict=True
         ):
             format_args = dict(question=row["question"], answer=choice)
-            results[f"{_DATASET_ID}-{pair_id}-{choice_label}"] = BinaryRow(
+            results[f"{_DATASET_ID}-{group_id}-{choice_label}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
                 split=split,
-                pair_id=pair_id,
+                group_id=group_id,
                 text=_TEMPLATE.format(**format_args),
                 is_true=row["answerKey"] == choice_label,
                 format_args=format_args,

@@ -109,7 +109,7 @@ def _get_dlk_dataset(
                 results[key] = BinaryRow(
                     dataset_id=dataset_id,
                     split=split,
-                    pair_id=str(row_idx),
+                    group_id=str(row_idx),
                     text=prompt,
                     is_true=row["label"] == answer_choice_int,
                     format_args={},

@@ -19,7 +19,7 @@ _TEMPLATE = (
 def get_truthful_qa() -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("truthful_qa", "generation")
     results = {}
-    for pair_id, row in deterministic_shuffle(
+    for group_id, row in deterministic_shuffle(
         enumerate(dataset["validation"]), lambda row: str(row[0])
     ):
         answers = [
@@ -28,10 +28,10 @@ def get_truthful_qa() -> dict[str, BinaryRow]:
         ]
         for answer_idx, (answer, is_correct) in enumerate(answers):
             format_args = dict(question=row["question"], answer=answer)
-            results[f"{_DATASET_ID}-{pair_id}-{answer_idx}"] = BinaryRow(
+            results[f"{_DATASET_ID}-{group_id}-{answer_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
-                split=get_split(_DATASET_ID, str(pair_id)),
-                pair_id=str(pair_id),
+                split=get_split(_DATASET_ID, str(group_id)),
+                group_id=str(group_id),
                 text=_TEMPLATE.format(**format_args),
                 is_true=is_correct,
                 format_args=format_args,

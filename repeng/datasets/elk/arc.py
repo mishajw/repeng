@@ -33,15 +33,15 @@ def _get_arc_split(
     dataset_id = _SUBSET_TO_ID[subset]
     results = {}
     for row in deterministic_shuffle(dataset[split], lambda row: row["id"]):
-        pair_id = row["id"]
+        group_id = row["id"]
         for choice, choice_label in zip(
             row["choices"]["text"], row["choices"]["label"], strict=True
         ):
             format_args = dict(question=row["question"], answer=choice)
-            results[f"{dataset_id}-{pair_id}-{choice_label}"] = BinaryRow(
+            results[f"{dataset_id}-{group_id}-{choice_label}"] = BinaryRow(
                 dataset_id=dataset_id,
                 split=split,
-                pair_id=pair_id,
+                group_id=group_id,
                 text=_TEMPLATE.format(**format_args),
                 is_true=row["answerKey"] == choice_label,
                 format_args=format_args,

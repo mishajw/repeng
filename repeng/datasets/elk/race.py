@@ -31,15 +31,15 @@ def _get_race_split(split: Split) -> dict[str, BinaryRow]:
     dataset: Any = datasets.load_dataset("race", "all")
     results = {}
     for row in deterministic_shuffle(dataset[split], lambda row: row["example_id"]):
-        pair_id = row["example_id"]
+        group_id = row["example_id"]
         for option_idx, option in enumerate(row["options"]):
             format_args = dict(
                 article=row["article"], question=row["question"], answer=option
             )
-            results[f"{_DATASET_ID}-{pair_id}-{option_idx}"] = BinaryRow(
+            results[f"{_DATASET_ID}-{group_id}-{option_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
                 split=split,
-                pair_id=pair_id,
+                group_id=group_id,
                 text=_TEMPLATE.format(**format_args),
                 is_true=_ANSWER_TO_INDEX[row["answer"]] == option_idx,
                 format_args=format_args,

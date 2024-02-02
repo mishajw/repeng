@@ -27,7 +27,7 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
                 text = _TEMPLATE.format(**format_args)
                 results[f"{key}-{answer}"] = BinaryRow(
                     dataset_id=_DATASET_ID,
-                    pair_id=row["key"],
+                    group_id=row["key"],
                     split=get_split(_DATASET_ID, row["key"]),
                     text=text,
                     is_true=(row["value"]["honest"] and answer)
