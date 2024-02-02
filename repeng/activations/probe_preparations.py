@@ -57,6 +57,9 @@ def prepare_activations_for_probes(activations: Sequence[Activation]) -> ProbeAr
     )
 
     df_grouped = df[df["pair_id"].notnull()]
+    group_sizes = df_grouped.groupby("pair_id").size()
+    valid_groups = (group_sizes[group_sizes > 1]).index
+    df_grouped = df_grouped[df_grouped["pair_id"].isin(valid_groups)]
     if len(df_grouped) == 0:
         grouped_activations = None
         labeled_grouped_activations = None
