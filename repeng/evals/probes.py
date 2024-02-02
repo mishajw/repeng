@@ -28,8 +28,10 @@ def eval_probe_by_row(
             labels=activations.labels,
         )
     )
-    if eval_result.accuracy < eval_result_flipped.accuracy:
-        return eval_result_flipped.model_copy(is_flipped=True)
+    if eval_result.roc_auc_score < eval_result_flipped.roc_auc_score:
+        return eval_result_flipped.model_copy(
+            update=dict(is_flipped=True),
+        )
     else:
         return eval_result
 
