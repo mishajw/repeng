@@ -59,7 +59,7 @@ def train_ccs_probe(
     for group in np.unique(arrays.groups):
         activations = arrays.activations[arrays.groups == group]
         labels = arrays.labels[arrays.groups == group]
-        if True not in labels:
+        if True not in labels or False not in labels:
             # This can happen when we truncate the dataset along a question boundary.
             continue
         # Get the first true and first false rows.
