@@ -43,7 +43,7 @@ class CcsProbe(torch.nn.Module, BaseProbe):
 
 @dataclass
 class CcsTrainingConfig:
-    num_steps: int = 1000
+    num_steps: int = 100
     lr: float = 0.001
     normalize: bool = True
 
