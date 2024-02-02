@@ -52,10 +52,15 @@ def get_model_activations(
     )
 
     def get_activation(activations: torch.Tensor) -> np.ndarray:
-        activations = activations.float().squeeze(0)
+        activations = activations.squeeze(0)
         if last_n_tokens is not None:
             activations = activations[-last_n_tokens:]
-        return activations.detach().cpu().numpy()
+        activations = activations.detach()
+        if activations.dtype == torch.bfloat16:
+            # bfloat16 is not supported by numpy. Cast to float32 instead of float16
+            # so we don't lose range.
+            activations = activations.to(dtype=torch.float32)
+        return activations.cpu().numpy()
 
     return ActivationRow(
         text=text,
