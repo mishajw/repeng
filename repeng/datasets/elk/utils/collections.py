@@ -50,8 +50,6 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
         "piqa",
     ],
     "small-varied": [
-        "common_sense_qa",
-        "imdb",
         "geometry_of_truth/cities",
         "arc_easy",
     ],
