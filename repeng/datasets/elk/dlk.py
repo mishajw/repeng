@@ -43,7 +43,6 @@ _DATASET_SPECS: dict[DlkDatasetId, _DatasetSpec] = {
 
 
 def get_dlk_dataset(dataset_id: DlkDatasetId):
-    print(dataset_id)
     dataset_spec = _DATASET_SPECS[dataset_id]
     dataset: Any = load_dataset(dataset_spec.name, dataset_spec.subset)
     return {

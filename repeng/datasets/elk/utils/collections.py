@@ -52,6 +52,7 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, list[DatasetId]] = {
     "small-varied": [
         "geometry_of_truth/cities",
         "arc_easy",
+        "dbpedia_14",
     ],
 }
 
