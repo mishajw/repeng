@@ -35,6 +35,5 @@ def get_truthful_qa() -> dict[str, BinaryRow]:
                 text=_TEMPLATE.format(**format_args),
                 is_true=is_correct,
                 format_args=format_args,
-                format_style="lat",
             )
     return results

@@ -39,6 +39,5 @@ def _get_common_sense_qa_split(split: Split) -> dict[str, BinaryRow]:
                 text=_TEMPLATE.format(**format_args),
                 is_true=row["answerKey"] == choice_label,
                 format_args=format_args,
-                format_style="lat",
             )
     return results

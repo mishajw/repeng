@@ -27,7 +27,6 @@ def get_true_false_dataset() -> dict[str, BinaryRow]:
                 text=cast(str, row["statement"]),
                 is_true=row["label"] == 1,
                 format_args=dict(),
-                format_style="misc",
             )
     return result
 

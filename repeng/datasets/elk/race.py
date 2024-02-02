@@ -43,6 +43,5 @@ def _get_race_split(split: Split) -> dict[str, BinaryRow]:
                 text=_TEMPLATE.format(**format_args),
                 is_true=_ANSWER_TO_INDEX[row["answer"]] == option_idx,
                 format_args=format_args,
-                format_style="lat",
             )
     return results

@@ -7,9 +7,9 @@ from repeng.utils.pydantic_ndarray import NdArray
 
 class ActivationResultRow(BaseModel, extra="forbid"):
     dataset_id: DatasetId
-    # TODO: Rename to group_id.
-    pair_id: str | None
+    group_id: str | None
     template_name: str | None
+    answer_type: str | None
     activations: dict[str, NdArray]  # (s, d)
     prompt_logprobs: float
     label: bool

@@ -33,6 +33,5 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
                     is_true=(row["value"]["honest"] and answer)
                     or (not row["value"]["honest"] and not answer),
                     format_args=dict(),
-                    format_style="misc",
                 )
     return results

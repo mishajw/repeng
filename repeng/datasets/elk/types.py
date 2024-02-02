@@ -59,7 +59,6 @@ class BinaryRow(BaseModel, extra="forbid"):
     text: str
     is_true: bool
     format_args: dict[str, str]
-    format_style: Literal["lat", "misc"]
     group_id: str | None = None
     """
     Rows are grouped, for example by question, in order to allow for probes that take

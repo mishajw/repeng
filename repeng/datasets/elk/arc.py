@@ -45,6 +45,5 @@ def _get_arc_split(
                 text=_TEMPLATE.format(**format_args),
                 is_true=row["answerKey"] == choice_label,
                 format_args=format_args,
-                format_style="lat",
             )
     return results
