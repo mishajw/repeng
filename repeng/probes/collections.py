@@ -14,12 +14,13 @@ def train_probe(
     probe_method: ProbeMethod, arrays: ActivationArrays
 ) -> BaseProbe | None:
     if probe_method == "ccs":
-        if arrays.groups is None:
+        if arrays.groups is None and arrays.answer_types is None:
             return None
         return train_ccs_probe(
             CcsTrainingConfig(),
             activations=arrays.activations,
             groups=arrays.groups,
+            answer_types=arrays.answer_types,
             # N.B.: Technically unsupervised!
             labels=arrays.labels,
         )

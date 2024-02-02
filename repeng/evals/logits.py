@@ -11,20 +11,20 @@ def eval_logits_by_question(
     labels: Bool[np.ndarray, "n"],  # noqa: F821
     groups: Int64[np.ndarray, "n"],  # noqa: F821
 ) -> QuestionsEvalResult:
-    group_labels: list[bool] = []
+    correct: list[bool] = []
     for group in np.unique(groups):
-        labels = labels[groups == group]
-        logits = logits[groups == group]
-        if labels.sum() > 1:
+        group_labels = labels[groups == group]
+        group_logits = logits[groups == group]
+        if group_labels.sum() > 1:
             # Some datasets have multiple correct answers per question. We filter out
             # all but the first correct answer.
-            mask = np.ones_like(labels)
-            mask[labels] = False
-            mask[labels.tolist().index(True)] = True
-            labels = labels[mask]
-            logits = logits[mask]
-        group_labels.append(labels[np.argmax(logits)])
-    accuracy = sum(group_labels) / len(group_labels)
+            mask = np.ones_like(group_labels)
+            mask[group_labels] = False
+            mask[group_labels.tolist().index(True)] = True
+            group_labels = group_labels[mask]
+            group_logits = group_logits[mask]
+        correct.append(group_labels[np.argmax(group_logits)])
+    accuracy = sum(correct) / len(correct)
     return QuestionsEvalResult(accuracy=accuracy, is_flipped=False)
 
 

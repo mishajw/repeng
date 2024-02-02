@@ -45,7 +45,6 @@ class CcsProbe(torch.nn.Module, BaseProbe):
 class CcsTrainingConfig:
     num_steps: int = 100
     lr: float = 0.001
-    normalize: bool = True
 
 
 def train_ccs_probe(
@@ -53,11 +52,13 @@ def train_ccs_probe(
     *,
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     groups: Int64[np.ndarray, "n d"],  # noqa: F722
+    answer_types: Int64[np.ndarray, "n d"] | None,  # noqa: F722
     # Although CCS is technically unsupervised, we need the labels for multiple-choice
     # questions so that we can reduce answers into a true/false pair.
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> CcsProbe:
-    activations = normalize_by_group(activations, groups)
+    if answer_types is not None:
+        activations = normalize_by_group(activations, answer_types)
 
     activations_1 = []
     activations_2 = []

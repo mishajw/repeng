@@ -1,11 +1,13 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 from jaxtyping import Bool, Float, Int64
 
-from repeng.datasets.elk.types import DatasetId, Split
+from repeng.datasets.activations.types import ActivationResultRow
+from repeng.datasets.elk.types import Split
 from repeng.datasets.elk.utils.filters import DatasetFilterId, filter_dataset
+from repeng.models.types import LlmId
 
 
 @dataclass
@@ -16,33 +18,45 @@ class ActivationArrays:
     answer_types: Int64[np.ndarray, "n"] | None  # noqa: F821
 
 
-@dataclass
-class ActivationRow:
-    dataset_id: DatasetId
-    split: Split
-    activations: Float[np.ndarray, "d"]  # noqa: F821
-    label: bool
-    group_id: str | None
-    answer_type: str | None
+# @dataclass
+# class ActivationRow:
+#     dataset_id: DatasetId
+#     split: Split
+#     activations: Float[np.ndarray, "d"]  # noqa: F821
+#     label: bool
+#     group_id: str | None
+#     answer_type: str | None
 
 
 @dataclass
-class ActivationDataset:
-    rows: list[ActivationRow]
+class ActivationArrayDataset:
+    rows: list[ActivationResultRow]
 
-    def get_unsupervised(
-        self, dataset_filter_id: DatasetFilterId, split: Split
-    ) -> ActivationArrays | None:
+    def get(
+        self,
+        llm_id: LlmId,
+        dataset_filter_id: DatasetFilterId,
+        split: Split,
+        point_name: str,
+        token_idx: int,
+    ) -> ActivationArrays:
         df = pd.DataFrame(
             [
-                asdict(row)
+                dict(
+                    label=row.label,
+                    # TODO
+                    group_id=row.pair_id,  # type: ignore
+                    answer_type=None,
+                    activations=row.activations[point_name][token_idx],
+                )
                 for row in self.rows
                 if filter_dataset(
                     dataset_filter_id,
                     dataset_id=row.dataset_id,
-                    template_name=row.group_id,
+                    template_name=row.template_name,
                 )
                 and row.split == split
+                and row.llm_id == llm_id
             ]
         )
 
