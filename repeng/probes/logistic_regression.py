@@ -2,14 +2,10 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from jaxtyping import Float, Int64
+from jaxtyping import Bool, Float, Int64
 from sklearn.linear_model import LogisticRegression
 from typing_extensions import override
 
-from repeng.activations.probe_preparations import (
-    LabeledActivationArray,
-    LabeledGroupedActivationArray,
-)
 from repeng.probes.base import BaseGroupedProbe, BaseProbe, PredictResult
 
 
@@ -48,21 +44,24 @@ class LogisticRegressionGroupedProbe(BaseGroupedProbe, LogisticRegressionProbe):
 
 
 def train_lr_probe(
-    activations: LabeledActivationArray,
+    *,
+    activations: Float[np.ndarray, "n d"],  # noqa: F722
+    labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> LogisticRegressionProbe:
     model = LogisticRegression(max_iter=1000, fit_intercept=True)
-    model.fit(activations.activations, activations.labels)
+    model.fit(activations, labels)
     return LogisticRegressionProbe(model)
 
 
 def train_grouped_lr_probe(
-    activations: LabeledGroupedActivationArray,
+    *,
+    activations: Float[np.ndarray, "n d"],  # noqa: F722
+    groups: Int64[np.ndarray, "n d"],  # noqa: F722
+    labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> LogisticRegressionGroupedProbe:
     probe = train_lr_probe(
-        LabeledActivationArray(
-            activations=_center_pairs(activations.activations, activations.groups),
-            labels=activations.labels,
-        )
+        activations=_center_pairs(activations, groups),
+        labels=labels,
     )
     return LogisticRegressionGroupedProbe(model=probe.model)
 

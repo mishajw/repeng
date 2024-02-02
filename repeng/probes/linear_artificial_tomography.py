@@ -11,7 +11,6 @@ from jaxtyping import Float
 from sklearn.decomposition import PCA
 from typing_extensions import override
 
-from repeng.activations.probe_preparations import ActivationArray
 from repeng.probes.base import DotProductProbe, PredictResult
 
 
@@ -28,16 +27,15 @@ class CentredDotProductProbe(DotProductProbe):
 
 
 def train_lat_probe(
-    activations: ActivationArray,
+    *,
+    activations: Float[np.ndarray, "n d"],  # noqa: F722
 ) -> DotProductProbe:
-    indices = list(range(len(activations.activations)))
+    indices = list(range(len(activations)))
     random.shuffle(indices)  # TODO: Double check if shuffling breaks things.
     indices = np.array(indices)[: len(indices) // 2 * 2]
     indices_1, indices_2 = indices.reshape(2, -1)
 
-    activation_diffs = (
-        activations.activations[indices_1] - activations.activations[indices_2]
-    )
+    activation_diffs = activations[indices_1] - activations[indices_2]
     activations_center = np.mean(activation_diffs, axis=0)
     activation_diffs_norm = activation_diffs - activations_center
     pca = PCA(n_components=1)

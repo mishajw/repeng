@@ -6,12 +6,12 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-from jaxtyping import Float
+from jaxtyping import Bool, Float, Int64
 from tqdm import tqdm
 from typing_extensions import override
 
-from repeng.activations.probe_preparations import LabeledGroupedActivationArray
 from repeng.probes.base import BaseProbe, PredictResult
+from repeng.probes.normalization import normalize_by_group
 
 
 class CcsProbe(torch.nn.Module, BaseProbe):
@@ -49,23 +49,30 @@ class CcsTrainingConfig:
 
 
 def train_ccs_probe(
+    config: CcsTrainingConfig,
+    *,
+    activations: Float[np.ndarray, "n d"],  # noqa: F722
+    groups: Int64[np.ndarray, "n d"],  # noqa: F722
     # Although CCS is technically unsupervised, we need the labels for multiple-choice
     # questions so that we can reduce answers into a true/false pair.
-    arrays: LabeledGroupedActivationArray,
-    config: CcsTrainingConfig,
+    labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> CcsProbe:
+    activations = normalize_by_group(activations, groups)
+
     activations_1 = []
     activations_2 = []
-    for group in np.unique(arrays.groups):
-        activations = arrays.activations[arrays.groups == group]
-        labels = arrays.labels[arrays.groups == group]
-        if True not in labels or False not in labels:
+    for group in np.unique(groups):
+        group_activations = activations[groups == group]
+        group_labels = labels[groups == group]
+        if True not in group_labels or False not in group_labels:
             # This can happen when we truncate the dataset along a question boundary.
             continue
         # Get the first true and first false rows.
-        indices = sorted([labels.tolist().index(True), labels.tolist().index(False)])
-        activations_1.append(activations[indices[0]])
-        activations_2.append(activations[indices[1]])
+        indices = sorted(
+            [group_labels.tolist().index(True), group_labels.tolist().index(False)]
+        )
+        activations_1.append(group_activations[indices[0]])
+        activations_2.append(group_activations[indices[1]])
     activations_1 = torch.tensor(activations_1).to(dtype=torch.float32)
     activations_2 = torch.tensor(activations_2).to(dtype=torch.float32)
 
