@@ -11,7 +11,7 @@ _loaded_llm: Llm[Any, Any] | None = None
 def load_llm_oioo(
     llm_id: LlmId,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[Any, Any]:
     """
     Loads an LLM with a one-in-one-out policy, i.e. only one model is loaded into
@@ -27,7 +27,7 @@ def load_llm_oioo(
             print(f"Unloaded LLM {_loaded_llm_id}, loading LLM {llm_id}")
         else:
             print(f"Loading LLM {llm_id}")
-        _loaded_llm = get_llm(llm_id, device, dtype)
+        _loaded_llm = get_llm(llm_id, device, use_half_precision=use_half_precision)
         _loaded_llm_id = llm_id
     assert _loaded_llm is not None
     return _loaded_llm

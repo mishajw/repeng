@@ -59,7 +59,7 @@ def create_activations_dataset(
                 load_llm_oioo(
                     value.llm_id,
                     device=device,
-                    dtype=torch.bfloat16,
+                    use_half_precision=True,
                 ),
                 text=value.text,
                 last_n_tokens=num_tokens_from_end,

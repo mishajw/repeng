@@ -18,7 +18,7 @@ from repeng.models.types import Gpt2Id, Llama2Id, Llm, LlmId, PythiaDpoId, Pythi
 def get_llm(
     llm_id: PythiaId | PythiaDpoId,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
     ...
 
@@ -27,7 +27,7 @@ def get_llm(
 def get_llm(
     llm_id: Gpt2Id,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
     ...
 
@@ -36,7 +36,7 @@ def get_llm(
 def get_llm(
     llm_id: Llama2Id,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
     ...
 
@@ -44,24 +44,25 @@ def get_llm(
 def get_llm(
     llm_id: LlmId,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[Any, Any]:
     if llm_id in get_args(PythiaId):
-        return pythia(cast(PythiaId, llm_id), device, dtype)
+        return pythia(cast(PythiaId, llm_id), device, use_half_precision)
     elif llm_id in get_args(Gpt2Id):
-        return gpt2(device, dtype)
+        return gpt2(device, use_half_precision)
     elif llm_id in get_args(Llama2Id):
-        return llama2(cast(Llama2Id, llm_id), device, dtype)
+        return llama2(cast(Llama2Id, llm_id), device, use_half_precision)
     elif llm_id in get_args(PythiaDpoId):
-        return pythia_dpo(cast(PythiaDpoId, llm_id), device, dtype)
+        return pythia_dpo(cast(PythiaDpoId, llm_id), device, use_half_precision)
     else:
         raise ValueError(f"Unknown LLM ID: {llm_id}")
 
 
 def gpt2(
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[GPT2LMHeadModel, PreTrainedTokenizerFast]:
+    dtype = torch.float16 if use_half_precision else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
         "gpt2", device_map=device, torch_dtype=dtype
     )
@@ -77,8 +78,9 @@ def gpt2(
 def pythia(
     pythia_id: PythiaId,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
+    dtype = torch.float16 if use_half_precision else torch.float32
     model = GPTNeoXForCausalLM.from_pretrained(
         f"EleutherAI/{pythia_id}",
         device_map=device,
@@ -97,8 +99,9 @@ def pythia(
 def pythia_dpo(
     pythia_dpo_id: PythiaDpoId,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[GPTNeoXForCausalLM, PreTrainedTokenizerFast]:
+    dtype = torch.float16 if use_half_precision else torch.float32
     if pythia_dpo_id == "pythia-dpo-1b":
         model_id = "Leogrin/eleuther-pythia1b-hh-dpo"
         pythia_id = "pythia-1b"
@@ -125,8 +128,9 @@ def pythia_dpo(
 def llama2(
     llama_id: Llama2Id,
     device: torch.device,
-    dtype: torch.dtype,
+    use_half_precision: bool,
 ) -> Llm[LlamaForCausalLM, PreTrainedTokenizerFast]:
+    dtype = torch.bfloat16 if use_half_precision else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
         f"meta-llama/{llama_id}", device_map=device, torch_dtype=dtype
     )
