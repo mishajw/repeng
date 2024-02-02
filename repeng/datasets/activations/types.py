@@ -9,7 +9,8 @@ class ActivationResultRow(BaseModel, extra="forbid"):
     dataset_id: DatasetId
     pair_id: str | None
     template_name: str | None
-    activations: dict[str, NdArray]  # (n, d)
+    activations: dict[str, NdArray]  # (s, d)
+    prompt_logprobs: float
     label: bool
     split: Split
     llm_id: LlmId
