@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -34,35 +35,41 @@ class ActivationArrayDataset:
 
     def get(
         self,
+        *,
         llm_id: LlmId,
         dataset_filter_id: DatasetFilterId,
         split: Split,
-        point_name: str,
+        point_name: str | Literal["logprobs"],
         token_idx: int,
+        limit: int | None,
     ) -> ActivationArrays:
         df = pd.DataFrame(
             [
                 dict(
                     label=row.label,
-                    # TODO
-                    group_id=row.pair_id,  # type: ignore
-                    answer_type=None,
-                    activations=row.activations[point_name][token_idx],
+                    group_id=row.group_id,
+                    answer_type=row.answer_type,
+                    activations=(
+                        row.activations[point_name][token_idx].copy()
+                        if point_name != "logprobs"
+                        else np.array(row.prompt_logprobs)
+                    ),
                 )
                 for row in self.rows
                 if filter_dataset(
                     dataset_filter_id,
                     dataset_id=row.dataset_id,
-                    template_name=row.template_name,
+                    answer_type=row.answer_type,
                 )
                 and row.split == split
                 and row.llm_id == llm_id
-            ]
+            ][:limit]
         )
+        assert not df.empty, (llm_id, dataset_filter_id, split, point_name, token_idx)
 
         group_counts = df["group_id"].value_counts().rename("group_count")
         df = df.join(group_counts, on="group_id")
-        df[df["group_count"] <= 1]["group_id"] = None
+        df.loc[df["group_count"] <= 1, "group_id"] = np.nan
         if df["group_id"].isna().any():  # type: ignore
             groups = None
         else:
@@ -81,7 +88,7 @@ class ActivationArrayDataset:
             )
 
         return ActivationArrays(
-            activations=np.stack(df["activations"].tolist()),
+            activations=np.stack(df["activations"].tolist()).astype(np.float32),
             labels=df["label"].to_numpy(),  # type: ignore
             groups=groups,
             answer_types=answer_types,
