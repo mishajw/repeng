@@ -79,7 +79,6 @@ _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
     "ag_news": lambda: get_dlk_dataset("ag_news"),
     "dbpedia_14": lambda: get_dlk_dataset("dbpedia_14"),
     "rte": lambda: get_dlk_dataset("rte"),
-    "qnli": lambda: get_dlk_dataset("qnli"),
     "copa": lambda: get_dlk_dataset("copa"),
     "boolq": lambda: get_dlk_dataset("boolq"),
     "piqa": lambda: get_dlk_dataset("piqa"),

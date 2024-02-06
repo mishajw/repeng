@@ -23,7 +23,6 @@ DatasetId = Literal[
     "ag_news",
     "dbpedia_14",
     "rte",
-    "qnli",
     "copa",
     "boolq",
     "piqa",
