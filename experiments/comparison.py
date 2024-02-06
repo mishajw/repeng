@@ -22,6 +22,12 @@ from repeng.probes.collections import ProbeMethod, train_probe
 assert load_dotenv("../.env")
 
 # %%
+"""
+Gets a pre-calculated dataset of activations.
+
+See experiments/comparison_2024-01-30.sh for the script that produced the dataset.
+"""
+
 mcontext = MContext(Path("../output/comparison"))
 activation_results_nonchat: list[ActivationResultRow] = mcontext.download_cached(
     "activations_results_nonchat",
@@ -41,6 +47,11 @@ dataset = ActivationArrayDataset(activation_results)
 
 
 # %%
+"""
+Pipeline for training & evaluating probes.
+"""
+
+
 @dataclass
 class TrainSpec:
     llm_id: LlmId
@@ -170,6 +181,11 @@ def _eval_probe(_: str, spec: EvalSpec) -> PipelineResultRow:
 
 
 # %%
+"""
+Pipeline for evaluating LLM performance based on logprobs.
+"""
+
+
 @dataclass
 class LogprobEvalSpec:
     llm_id: LlmId
