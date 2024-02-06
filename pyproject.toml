@@ -40,3 +40,6 @@ profile = "black"
 
 [tool.ruff]
 exclude = ['experiments/scratch']
+
+[tool.pyright]
+exclude = ['experiments/scratch']

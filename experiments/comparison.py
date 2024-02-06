@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from repeng.activations.probe_preparations import ActivationArrayDataset
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.elk.utils.filters import DatasetFilterId
+from repeng.datasets.elk.utils.filters import DatasetFilter, DatasetIdFilter
 from repeng.evals.logits import eval_logits_by_question, eval_logits_by_row
 from repeng.evals.probes import eval_probe_by_question, eval_probe_by_row
 from repeng.models.llms import LlmId
@@ -55,7 +55,7 @@ Pipeline for training & evaluating probes.
 @dataclass
 class TrainSpec:
     llm_id: LlmId
-    train_dataset: DatasetFilterId
+    dataset: DatasetFilter
     probe_method: ProbeMethod
     point_name: str
     token_idx: int
@@ -65,12 +65,13 @@ class TrainSpec:
 class EvalSpec:
     train_spec: TrainSpec
     probe: BaseProbe
-    dataset_id: DatasetFilterId
+    dataset: DatasetFilter
 
 
 class PipelineResultRow(BaseModel, extra="forbid"):
     llm_id: LlmId
-    train_dataset: DatasetFilterId
+    train_dataset: str
+    eval_dataset: str
     probe_method: ProbeMethod
     point_name: str
     token_idx: int
@@ -85,8 +86,8 @@ token_idxs: list[int] = [-1]
 
 def run_pipeline(
     llm_ids: list[LlmId],
-    train_datasets: list[DatasetFilterId],
-    eval_datasets: list[DatasetFilterId],
+    train_datasets: list[DatasetFilter],
+    eval_datasets: list[DatasetFilter],
     probe_methods: list[ProbeMethod],
     point_skip: int | None,
 ) -> list[PipelineResultRow]:
@@ -96,7 +97,7 @@ def run_pipeline(
                 [llm_id, str(train_dataset), probe_method, point.name, str(token_idx)]
             ): TrainSpec(
                 llm_id=llm_id,
-                train_dataset=train_dataset,
+                dataset=train_dataset,
                 probe_method=probe_method,
                 point_name=point.name,
                 token_idx=token_idx,
@@ -114,7 +115,7 @@ def run_pipeline(
             spec.probe_method,
             dataset.get(
                 llm_id=spec.llm_id,
-                dataset_filter_id=spec.train_dataset,
+                dataset_filter=spec.dataset,
                 split="train",
                 point_name=spec.point_name,
                 token_idx=spec.token_idx,
@@ -133,7 +134,7 @@ def run_pipeline(
                 f"{key}-{eval_dataset}": EvalSpec(
                     train_spec=probe_and_spec[1],
                     probe=cast(BaseProbe, probe_and_spec[0]),
-                    dataset_id=eval_dataset,
+                    dataset=eval_dataset,
                 )
                 for eval_dataset in eval_datasets
             }
@@ -150,7 +151,7 @@ def run_pipeline(
 def _eval_probe(_: str, spec: EvalSpec) -> PipelineResultRow:
     arrays = dataset.get(
         llm_id=spec.train_spec.llm_id,
-        dataset_filter_id=spec.dataset_id,
+        dataset_filter=spec.dataset,
         split="validation",
         point_name=spec.train_spec.point_name,
         token_idx=spec.train_spec.token_idx,
@@ -169,7 +170,8 @@ def _eval_probe(_: str, spec: EvalSpec) -> PipelineResultRow:
         )
     return PipelineResultRow(
         llm_id=spec.train_spec.llm_id,
-        train_dataset=spec.train_spec.train_dataset,
+        train_dataset=spec.train_spec.dataset.get_name(),
+        eval_dataset=spec.dataset.get_name(),
         probe_method=spec.train_spec.probe_method,
         point_name=spec.train_spec.point_name,
         token_idx=spec.train_spec.token_idx,
@@ -189,12 +191,12 @@ Pipeline for evaluating LLM performance based on logprobs.
 @dataclass
 class LogprobEvalSpec:
     llm_id: LlmId
-    eval_dataset: DatasetFilterId
+    dataset: DatasetFilter
 
 
 class LogprobsPipelineResultRow(BaseModel, extra="forbid"):
     llm_id: LlmId
-    eval_dataset: DatasetFilterId
+    eval_dataset: str
     accuracy: float
     row_accuracy: float
     row_roc_auc: float
@@ -203,7 +205,7 @@ class LogprobsPipelineResultRow(BaseModel, extra="forbid"):
 
 def run_logprobs_pipeline(
     llm_ids: list[LlmId],
-    eval_datasets: list[DatasetFilterId],
+    eval_datasets: list[DatasetFilter],
 ) -> list[LogprobsPipelineResultRow]:
     return (
         mcontext.create(
@@ -225,7 +227,7 @@ def run_logprobs_pipeline(
 def _eval_logprobs(spec: LogprobEvalSpec) -> LogprobsPipelineResultRow:
     arrays = dataset.get(
         llm_id=spec.llm_id,
-        dataset_filter_id=spec.eval_dataset,
+        dataset_filter=spec.dataset,
         split="validation",
         point_name="logprobs",
         token_idx=-1,
@@ -244,7 +246,7 @@ def _eval_logprobs(spec: LogprobEvalSpec) -> LogprobsPipelineResultRow:
         )
     return LogprobsPipelineResultRow(
         llm_id=spec.llm_id,
-        eval_dataset=spec.eval_dataset,
+        eval_dataset=spec.dataset.get_name(),
         accuracy=question_result.accuracy if question_result else row_result.accuracy,
         row_accuracy=row_result.accuracy,
         question_accuracy=question_result.accuracy if question_result else None,
@@ -272,8 +274,8 @@ Q0: Simple test. Do we get 80% accuracy on arc_easy?
 """
 results = run_pipeline(
     llm_ids=["Llama-2-7b-chat-hf"],
-    train_datasets=["arc_easy"],
-    eval_datasets=["arc_easy"],
+    train_datasets=[DatasetIdFilter("arc_easy")],
+    eval_datasets=[DatasetIdFilter("arc_easy")],
     probe_methods=["lr", "lat"],
     point_skip=4,
 )

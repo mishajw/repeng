@@ -7,7 +7,7 @@ from jaxtyping import Bool, Float, Int64
 
 from repeng.datasets.activations.types import ActivationResultRow
 from repeng.datasets.elk.types import Split
-from repeng.datasets.elk.utils.filters import DatasetFilterId, filter_dataset
+from repeng.datasets.elk.utils.filters import DatasetFilter
 from repeng.models.types import LlmId
 
 
@@ -19,16 +19,6 @@ class ActivationArrays:
     answer_types: Int64[np.ndarray, "n"] | None  # noqa: F821
 
 
-# @dataclass
-# class ActivationRow:
-#     dataset_id: DatasetId
-#     split: Split
-#     activations: Float[np.ndarray, "d"]  # noqa: F821
-#     label: bool
-#     group_id: str | None
-#     answer_type: str | None
-
-
 @dataclass
 class ActivationArrayDataset:
     rows: list[ActivationResultRow]
@@ -37,7 +27,7 @@ class ActivationArrayDataset:
         self,
         *,
         llm_id: LlmId,
-        dataset_filter_id: DatasetFilterId,
+        dataset_filter: DatasetFilter,
         split: Split,
         point_name: str | Literal["logprobs"],
         token_idx: int,
@@ -56,8 +46,7 @@ class ActivationArrayDataset:
                     ),
                 )
                 for row in self.rows
-                if filter_dataset(
-                    dataset_filter_id,
+                if dataset_filter.filter(
                     dataset_id=row.dataset_id,
                     answer_type=row.answer_type,
                 )
@@ -65,7 +54,7 @@ class ActivationArrayDataset:
                 and row.llm_id == llm_id
             ][:limit]
         )
-        assert not df.empty, (llm_id, dataset_filter_id, split, point_name, token_idx)
+        assert not df.empty, (llm_id, dataset_filter, split, point_name, token_idx)
 
         group_counts = df["group_id"].value_counts().rename("group_count")
         df = df.join(group_counts, on="group_id")

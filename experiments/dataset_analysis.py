@@ -11,7 +11,7 @@ datasets = get_dataset_collection("all")
 # %%
 df = pd.DataFrame(
     [row.model_dump() for row in datasets.values()],
-    index=list(datasets.keys()),
+    index=list(datasets.keys()),  # type: ignore
 )
 df["word_counts"] = df["text"].apply(
     lambda row: len(row.split()),  # type: ignore
