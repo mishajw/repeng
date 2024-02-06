@@ -13,16 +13,10 @@ def eval_logits_by_question(
 ) -> QuestionsEvalResult:
     correct: list[bool] = []
     for group in np.unique(groups):
-        group_labels = labels[groups == group]
-        group_logits = logits[groups == group]
-        if group_labels.sum() > 1:
-            # Some datasets have multiple correct answers per question. We filter out
-            # all but the first correct answer.
-            mask = np.ones_like(group_labels)
-            mask[group_labels] = False
-            mask[group_labels.tolist().index(True)] = True
-            group_labels = group_labels[mask]
-            group_logits = group_logits[mask]
+        group_labels = labels[groups == group].copy()
+        group_logits = logits[groups == group].copy()
+        # N.B.: Some datasets have multiple correct answers per question. This is fine,
+        # we just check that one of the correct answers was chosen.
         correct.append(group_labels[np.argmax(group_logits)])
     accuracy = sum(correct) / len(correct)
     return QuestionsEvalResult(accuracy=accuracy, is_flipped=False)
