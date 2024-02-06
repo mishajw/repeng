@@ -59,7 +59,6 @@ def _get_paired(
     expected_identical_labels: list[str],
 ) -> dict[str, BinaryRow]:
     result = {}
-    dataset_id = "geometry_of_truth/cities"
     csv_pos = _get_csv(csv_name_pos)
     csv_neg = _get_csv(csv_name_neg)
     assert len(csv_pos) == len(csv_neg)
