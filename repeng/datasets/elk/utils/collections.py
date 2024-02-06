@@ -1,7 +1,10 @@
+from dataclasses import dataclass
 from typing import Literal, cast, get_args
 
+from overrides import override
+
 from repeng.datasets.elk.types import BinaryRow, DatasetId
-from repeng.datasets.elk.utils.filters import DatasetCollectionFilter
+from repeng.datasets.elk.utils.filters import DatasetCollectionFilter, DatasetFilter
 from repeng.datasets.elk.utils.fns import get_datasets
 
 DatasetCollectionId = Literal[
@@ -12,11 +15,32 @@ DatasetCollectionId = Literal[
     "repe-val",
     "got",
     "got-val",
+    "multis",
 ]
 
 _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
     "all": DatasetCollectionFilter(
         "all", cast(list[DatasetId], list(get_args(DatasetId)))
+    ),
+    "multis": DatasetCollectionFilter(
+        "dlk-repe-got",
+        [
+            "imdb",
+            "amazon_polarity",
+            "ag_news",
+            "dbpedia_14",
+            "rte",
+            "copa",
+            "piqa",
+            "open_book_qa",
+            "race",
+            "arc_challenge",
+            "arc_easy",
+            "geometry_of_truth/cities",
+            "geometry_of_truth/sp_en_trans",
+            "geometry_of_truth/cities_cities_conj",
+            "geometry_of_truth/cities_cities_disj",
+        ],
     ),
     "dlk": DatasetCollectionFilter(
         "dlk",
@@ -24,13 +48,13 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "imdb",
             "amazon_polarity",
             "ag_news",
+            "dbpedia_14",
             "rte",
             "copa",
-            "boolq",
             "piqa",
         ],
     ),
-    "dlk-val": DatasetCollectionFilter("dlk-val", ["dbpedia_14"]),
+    "dlk-val": DatasetCollectionFilter("dlk-val", ["boolq"]),
     "repe": DatasetCollectionFilter(
         "repe",
         [
@@ -50,7 +74,21 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "geometry_of_truth/cities_cities_disj",
         ],
     ),
+    "got-val": DatasetCollectionFilter("got-val", ["geometry_of_truth/larger_than"]),
 }
+
+
+@dataclass
+class DatasetCollectionIdFilter(DatasetFilter):
+    collection: DatasetCollectionId
+
+    @override
+    def get_name(self) -> str:
+        return self.collection
+
+    @override
+    def filter(self, dataset_id: DatasetId, answer_type: str | None) -> bool:
+        return dataset_id in resolve_dataset_ids(self.collection)
 
 
 def get_dataset_collection(

@@ -1,4 +1,6 @@
 # %%
+import random
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence, cast
@@ -11,7 +13,17 @@ from pydantic import BaseModel
 
 from repeng.activations.probe_preparations import ActivationArrayDataset
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.elk.utils.filters import DatasetFilter, DatasetIdFilter
+from repeng.datasets.elk.types import DatasetId
+from repeng.datasets.elk.utils.collections import (
+    DatasetCollectionId,
+    DatasetCollectionIdFilter,
+    resolve_dataset_ids,
+)
+from repeng.datasets.elk.utils.filters import (
+    DatasetCollectionFilter,
+    DatasetFilter,
+    DatasetIdFilter,
+)
 from repeng.evals.logits import eval_logits_by_question, eval_logits_by_row
 from repeng.evals.probes import eval_probe_by_question, eval_probe_by_row
 from repeng.models.llms import LlmId
@@ -86,8 +98,8 @@ token_idxs: list[int] = [-1]
 
 def run_pipeline(
     llm_ids: list[LlmId],
-    train_datasets: list[DatasetFilter],
-    eval_datasets: list[DatasetFilter],
+    train_datasets: Sequence[DatasetFilter],
+    eval_datasets: Sequence[DatasetFilter],
     probe_methods: list[ProbeMethod],
     point_skip: int | None,
 ) -> list[PipelineResultRow]:
@@ -205,7 +217,7 @@ class LogprobsPipelineResultRow(BaseModel, extra="forbid"):
 
 def run_logprobs_pipeline(
     llm_ids: list[LlmId],
-    eval_datasets: list[DatasetFilter],
+    eval_datasets: Sequence[DatasetFilter],
 ) -> list[LogprobsPipelineResultRow]:
     return (
         mcontext.create(
@@ -259,6 +271,15 @@ def _eval_logprobs(spec: LogprobEvalSpec) -> LogprobsPipelineResultRow:
 Utilities for visualizing the results.
 """
 
+DIMS = {
+    "llm_id",
+    "train_dataset",
+    "eval_dataset",
+    "probe_method",
+    "point_name",
+    "token_idx",
+}
+
 
 def to_dataframe(
     results: Sequence[PipelineResultRow | LogprobsPipelineResultRow],
@@ -266,6 +287,15 @@ def to_dataframe(
     df = pd.DataFrame([row.model_dump() for row in results])
     df["is_supervised"] = df["probe_method"].isin(["lr", "lr-grouped", "mmp"])
     return df
+
+
+def select_best(df: pd.DataFrame, column: str, metric: str) -> pd.DataFrame:
+    return (
+        df.sort_values(metric, ascending=False)
+        .groupby(list(DIMS - {column}))
+        .first()
+        .reset_index()
+    )
 
 
 # %%
@@ -287,3 +317,94 @@ px.line(
     color="probe_method",
     line_dash="is_supervised",
 )
+
+# %%
+"""
+Q1: Does adding more datasets improve generalization?
+"""
+
+
+def sample(
+    dataset_collection_id: DatasetCollectionId, *, seed: int, k: int | None
+) -> list[DatasetId]:
+    dataset_ids = resolve_dataset_ids(dataset_collection_id)
+    if k is None:
+        return dataset_ids
+    random.seed(seed)
+    return random.sample(dataset_ids, k=k)
+
+
+train_datasets = [
+    DatasetCollectionFilter(
+        f"{dataset}-{size_name}-{i}", sample(dataset, seed=i, k=size)
+    )
+    for dataset, sizes in [
+        ("dlk", [3, 5, None]),
+        ("repe", [2, 3, None]),
+        ("got", [2, 3, None]),
+        ("multis", [4, 8, None]),
+    ]
+    for size, n_iters, size_name in zip(
+        sizes,
+        [3, 3, 1],
+        ["small", "medium", "large"],
+    )
+    for i in range(n_iters)
+]
+results = run_pipeline(
+    llm_ids=["Llama-2-7b-chat-hf"],
+    train_datasets=[
+        *train_datasets,
+        *[
+            DatasetIdFilter(dataset)
+            for collection in ["dlk", "repe", "got"]
+            for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+        ],
+    ],
+    eval_datasets=[
+        DatasetCollectionIdFilter("dlk-val"),
+        DatasetCollectionIdFilter("repe-val"),
+        DatasetCollectionIdFilter("got-val"),
+        DatasetIdFilter("truthful_qa"),
+    ],
+    probe_methods=["lr", "lat"],
+    point_skip=4,
+)
+
+# %%
+df = to_dataframe(results)
+df["train_dataset"] = df["train_dataset"].apply(lambda d: re.sub(r"-\d+$", "", d))
+df = (
+    df.groupby(list(DIMS))["accuracy"]
+    .agg(accuracy="mean", accuracy_std="std", count="count")  # type: ignore
+    .reset_index()
+)
+dlk_datasets = ["dlk-small", "dlk-medium", "dlk-large", *resolve_dataset_ids("dlk")]
+repe_datasets = [
+    "repe-small",
+    "repe-medium",
+    "repe-large",
+    *resolve_dataset_ids("repe"),
+]
+got_datasets = ["got-small", "got-medium", "got-large", *resolve_dataset_ids("got")]
+df["train_group"] = df["train_dataset"].apply(
+    lambda d: "dlk" if d in dlk_datasets else "repe" if d in repe_datasets else "got"
+)
+df = select_best(df, "point_name", "accuracy")
+fig = px.bar(
+    df,
+    x="train_dataset",
+    y="accuracy",
+    error_y="accuracy_std",
+    color="train_group",
+    facet_col="eval_dataset",
+    facet_row="probe_method",
+    category_orders={
+        "train_dataset": dlk_datasets + repe_datasets + got_datasets,
+    },
+)
+fig.update_layout(
+    height=800,
+    width=2000,
+)
+fig.show()
