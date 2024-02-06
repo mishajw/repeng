@@ -7,6 +7,8 @@ Split = Literal["train", "validation"]
 DatasetId = Literal[
     "arc_challenge",
     "arc_easy",
+    "arc_challenge/qna",
+    "arc_easy/qna",
     "geometry_of_truth/cities",
     "geometry_of_truth/sp_en_trans",
     "geometry_of_truth/larger_than",

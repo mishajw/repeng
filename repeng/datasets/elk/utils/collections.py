@@ -2,7 +2,7 @@ from typing import Callable, Literal, cast, get_args
 
 from tqdm import tqdm
 
-from repeng.datasets.elk.arc import get_arc
+from repeng.datasets.elk.arc import get_arc, get_arc_qna
 from repeng.datasets.elk.common_sense_qa import get_common_sense_qa
 from repeng.datasets.elk.dlk import get_dlk_dataset
 from repeng.datasets.elk.geometry_of_truth import get_geometry_of_truth
@@ -68,6 +68,8 @@ _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
     ),
     "arc_challenge": lambda: get_arc("challenge"),
     "arc_easy": lambda: get_arc("easy"),
+    "arc_challenge/qna": lambda: get_arc_qna("challenge"),
+    "arc_easy/qna": lambda: get_arc_qna("easy"),
     "common_sense_qa": lambda: get_common_sense_qa(),
     "open_book_qa": lambda: get_open_book_qa(),
     "race": lambda: get_race(),
