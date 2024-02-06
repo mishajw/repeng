@@ -1,10 +1,11 @@
 # %%
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from pprint import pprint
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
@@ -13,17 +14,13 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score
 
 from repeng.activations.inference import get_model_activations
-from repeng.activations.probe_preparations import (
-    Activation,
-    ActivationArray,
-    LabeledActivationArray,
-    LabeledGroupedActivationArray,
-    prepare_activations_for_probes,
-)
-from repeng.datasets.elk.types import BinaryRow
+from repeng.activations.probe_preparations import ActivationArrayDataset
+from repeng.datasets.activations.types import ActivationResultRow
+from repeng.datasets.elk.types import BinaryRow, DatasetId
 from repeng.datasets.elk.utils.collections import get_datasets
-from repeng.datasets.elk.utils.filters import limit_dataset_and_split_fn
-from repeng.evals.probes import evaluate_probe
+from repeng.datasets.elk.utils.limits import limit_dataset_and_split_fn
+from repeng.evals.logits import eval_logits_by_question
+from repeng.evals.probes import eval_probe_by_question, eval_probe_by_row
 from repeng.models.loading import load_llm_oioo
 from repeng.models.points import get_points
 from repeng.models.types import LlmId
@@ -34,54 +31,31 @@ from repeng.probes.logistic_regression import train_lr_probe
 mcontext = MContext(Path("../output/probe_test"))
 dataset = (
     mcontext.create_cached(
-        "dataset-csq6",
+        "dataset-v4",
         lambda: get_datasets(
             [
-                "common_sense_qa",
+                "arc_easy",
+                "arc_easy/qna",
+                # "geometry_of_truth/cities",
                 # "common_sense_qa/qna",
                 # "common_sense_qa/options-numbers",
                 # "common_sense_qa/options-letters",
-                "open_book_qa",
+                # "open_book_qa",
             ]
         ),
         to=BinaryRow,
     )
-    .filter(lambda _, row: row.dataset_id == "open_book_qa")
+    # .filter(lambda _, row: row.dataset_id == "open_book_qa")
     .filter(
-        limit_dataset_and_split_fn(train_limit=2000, validation_limit=200),
+        limit_dataset_and_split_fn(train_limit=2000, validation_limit=500),
     )
 )
 
 
 # %%
-FewShotStyle = Literal[
-    "none",
-    "examples",
-    "assistant",
-]
-FEW_SHOT_PREFIX_EXAMPLES = (
-    "The city of London is in England.\n"
-    "The city of Paris is in France.\n"
-    "The city of Berlin is in Germany.\n"
-)
-FEW_SHOT_PREFIX_ASSISTANT = (
-    "You are a helpful assistant who always tells the truth. "
-    "The user will ask you for information, "
-    "and your answers should *always* be truthful.\n"
-    "USER: Could you tell me the location of a city?\n"
-    "ASSISTANT: Sure: "
-)
-
-
-def add_few_shot_prefix(text: str, style: FewShotStyle) -> str:
-    if style == "none":
-        return text
-    elif style == "examples":
-        return FEW_SHOT_PREFIX_EXAMPLES + text
-    elif style == "assistant":
-        return FEW_SHOT_PREFIX_ASSISTANT + text
-    else:
-        raise ValueError(f"Unknown few-shot style: {style}")
+pprint(dataset.get()[0].model_dump())
+pprint(dataset.get()[-1].model_dump())
+print(set(d.dataset_id for d in dataset.get()))
 
 
 # %%
@@ -89,51 +63,236 @@ def add_few_shot_prefix(text: str, style: FewShotStyle) -> str:
 class InputRow:
     row: BinaryRow
     llm_id: LlmId
-    few_shot_style: FewShotStyle
     text: str
 
 
 llm_ids: list[LlmId] = [
+    # "pythia-12b",
+    # "Llama-2-13b-chat-hf",
     # "pythia-6.9b",
-    "pythia-1b",
-    # "pythia-dpo-1b",
-    # "pythia-sft-1b",
-    # "pythia-1.4b",
-    # "pythia-dpo-1.4b",
-    # "pythia-sft-1.4b",
-]
-few_shot_styles: list[FewShotStyle] = [
-    "none",
-    # "examples",
-    # "assistant",
+    "Llama-2-7b-hf",
+    # "Llama-2-7b-chat-hf",
 ]
 inputs = dataset.flat_map(
     lambda key, row: {
-        f"{key}-{llm_id}-{few_shot_style}": InputRow(
+        f"{key}-{llm_id}": InputRow(
             row=row,
             llm_id=llm_id,
-            few_shot_style=few_shot_style,
-            text=add_few_shot_prefix(row.text, few_shot_style),
+            text=row.text,
         )
         for llm_id in llm_ids
-        for few_shot_style in few_shot_styles
     }
-).sort(lambda _, row: row.llm_id)
+).sort(lambda _, row: llm_ids.index(row.llm_id))
 
 # %%
 activations = inputs.map_cached(
-    "activations",
+    "activations-v4",
     lambda _, row: get_model_activations(
         load_llm_oioo(
             row.llm_id,
-            device=torch.device("mps"),
-            dtype=torch.float32,
+            device=torch.device("cuda"),
+            use_half_precision=True,
         ),
         text=row.text,
         last_n_tokens=1,
     ),
     to="pickle",
 )
+
+# %%
+arrays_dataset = activations.join(
+    inputs,
+    lambda _, activations_row, input_row: ActivationResultRow(
+        dataset_id=input_row.row.dataset_id,
+        group_id=input_row.row.group_id,
+        template_name=input_row.row.template_name,
+        answer_type=input_row.row.answer_type,
+        activations=activations_row.activations,
+        prompt_logprobs=activations_row.token_logprobs.sum(),
+        label=input_row.row.is_true,
+        split=input_row.row.split,
+        llm_id=input_row.llm_id,
+    ),
+)
+arrays_dataset = ActivationArrayDataset(arrays_dataset.get())
+
+
+# %%
+def train_and_eval(
+    llm_id: LlmId,
+    point: str,
+    probe_method: ProbeMethod,
+    dataset_id: DatasetId,
+):
+    arrays = arrays_dataset.get(
+        llm_id=llm_id,
+        dataset_filter_id=dataset_id,
+        split="train",
+        point_name=point,
+        token_idx=-1,
+        limit=None,
+    )
+    probe = train_probe(probe_method, arrays)
+    assert probe is not None
+    arrays_val = arrays_dataset.get(
+        llm_id=llm_id,
+        dataset_filter_id=dataset_id,
+        split="validation",
+        point_name=point,
+        token_idx=-1,
+        limit=None,
+    )
+    assert arrays_val.groups is not None
+    results = eval_probe_by_question(
+        probe,
+        activations=arrays_val.activations,
+        labels=arrays_val.labels,
+        groups=arrays_val.groups,
+    )
+    return dict(
+        llm_id=llm_id,
+        point=point,
+        probe_method=probe_method,
+        dataset_id=dataset_id,
+        acc=results.accuracy,
+    )
+
+
+def eval_logprobs(llm_id: LlmId, dataset_id: DatasetId):
+    arrays_logits = arrays_dataset.get(
+        llm_id=llm_id,
+        dataset_filter_id=dataset_id,
+        split="validation",
+        point_name="logprobs",
+        token_idx=-1,
+        limit=None,
+    )
+    assert arrays_logits.groups is not None
+    results = eval_logits_by_question(
+        logits=arrays_logits.activations,
+        labels=arrays_logits.labels,
+        groups=arrays_logits.groups,
+    )
+    return dict(
+        llm_id=llm_id,
+        point="logprobs",
+        probe_method="logprobs",
+        dataset_id=dataset_id,
+        acc=results.accuracy,
+    )
+
+
+probe_methods: list[ProbeMethod] = ["mmp", "lr"]
+dataset_ids: list[DatasetId] = ["arc_easy", "arc_easy/qna"]
+df = (
+    mcontext.create(
+        {
+            f"{llm_id}-{point.name}-{probe_method}-{dataset_id}": (
+                llm_id,
+                point.name,
+                probe_method,
+                dataset_id,
+            )
+            for llm_id in llm_ids
+            for point in get_points(llm_id)[-10:]
+            for probe_method in probe_methods
+            for dataset_id in dataset_ids
+        }
+    )
+    .map_cached(
+        "train-and-eval",
+        lambda _, args: train_and_eval(
+            llm_id=args[0], point=args[1], probe_method=args[2], dataset_id=args[3]
+        ),
+        to="pickle",
+    )
+    .to_dataframe(lambda d: d)
+)
+df_logprobs = (
+    mcontext.create(
+        {
+            f"{llm_id}-{dataset_id}": (llm_id, dataset_id)
+            for llm_id in llm_ids
+            for dataset_id in dataset_ids
+        }
+    )
+    .map_cached(
+        "eval-logprobs",
+        lambda _, args: eval_logprobs(llm_id=args[0], dataset_id=args[1]),
+        to="pickle",
+    )
+    .to_dataframe(lambda d: d)
+)
+df = pd.concat([df, df_logprobs])
+
+
+# %%
+fig = px.line(
+    pd.DataFrame(df).sort_values("point"),
+    x="point",
+    y="acc",
+    color="probe_method",
+    facet_col="llm_id",
+    facet_row="dataset_id",
+    markers=True,
+)
+fig.update_layout(height=600)
+fig.show()
+
+# %%
+acts = activations.join(
+    inputs,
+    lambda _, activations_row, input_row: dict(
+        dataset_id=input_row.row.dataset_id,
+        label=input_row.row.is_true,
+        group_id=input_row.row.group_id,
+        activations=activations_row.token_logprobs.sum(),
+        llm_id=input_row.llm_id,
+    ),
+).to_dataframe(lambda d: d)
+mean_activations = (
+    acts.groupby("group_id")["activations"].mean().rename("mean_activations")
+)
+acts = acts.join(mean_activations, on="group_id")
+acts["activations"] -= acts["mean_activations"]
+acts = acts.groupby("label").sample(100)
+
+# %%
+fig = px.histogram(
+    acts,
+    x="activations",
+    color="label",
+    facet_col="llm_id",
+    nbins=50,
+    opacity=0.5,
+    barmode="overlay",
+)
+fig.show()
+
+# %%
+for model in llm_ids:
+    acts = activations.join(
+        inputs.filter(lambda _, row: row.llm_id == model),
+        lambda _, activations_row, input_row: Activation(
+            dataset_id=input_row.row.dataset_id,
+            label=input_row.row.is_true,
+            group_id=input_row.row.group_id,
+            activations=activations_row.token_logprobs.sum(),
+        ),
+    ).get()
+    arrays = prepare_activations_for_probes(acts)
+    assert arrays.labeled_grouped is not None
+    print(model)
+    pprint(
+        eval_logits_by_question(
+            LabeledGroupedLogits(
+                logits=arrays.labeled_grouped.activations,
+                labels=arrays.labeled_grouped.labels,
+                groups=arrays.labeled_grouped.groups,
+            )
+        ).model_dump()
+    )
+
 
 # %%
 df = activations.join(
@@ -147,7 +306,7 @@ df = activations.join(
         few_shot_style=input_row.few_shot_style,
         dataset_id=input_row.row.dataset_id,
         # answer_tag=input_row.row.answer_tag,
-        pair_id=input_row.row.pair_id,
+        pair_id=input_row.row.group_id,
     ),
 ).to_dataframe(lambda d: d)
 df
@@ -251,7 +410,7 @@ probe = train_lr_probe(labelled_activation_array)
 #     activation_array,
 #     LatTrainingConfig(num_random_pairs=5000),
 # )
-eval = evaluate_probe(probe, activation_array_val)
+eval = eval_probe_by_row(probe, activation_array_val)
 plt.plot(eval.fprs, eval.tprs)
 print(eval.roc_auc_score)
 # print(eval.f1_score)
@@ -306,7 +465,7 @@ probe_arrays = prepare_activations_for_probes(
     [
         Activation(
             dataset_id="geometry_of_truth-cities",
-            pair_id=None,
+            group_id=None,
             activations=row.activations[get_points(row.model)[-2].name][-1],
             label=row.label,
         )
@@ -318,7 +477,7 @@ probe_arrays_val = prepare_activations_for_probes(
     [
         Activation(
             dataset_id="geometry_of_truth-cities",
-            pair_id=None,
+            group_id=None,
             activations=row.activations[get_points(row.model)[-2].name][-1],
             label=row.label,
         )
@@ -332,7 +491,7 @@ df_eval = pd.DataFrame(
     [
         dict(
             probe_method=probe_method,
-            **evaluate_probe(
+            **eval_probe_by_row(
                 train_probe(probe_method, probe_arrays), probe_arrays_val.labeled
             ).model_dump(),
         )

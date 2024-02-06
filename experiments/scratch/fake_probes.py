@@ -46,7 +46,7 @@ activations = prepare_activations_for_probes(
     [
         Activation(
             dataset_id="test",
-            pair_id=row["pair_id"],
+            group_id=row["pair_id"],
             activations=row["activations"],
             label=row["label"] == "true",
         )
