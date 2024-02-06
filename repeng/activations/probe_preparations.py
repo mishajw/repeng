@@ -70,13 +70,13 @@ class ActivationArrayDataset:
         group_counts = df["group_id"].value_counts().rename("group_count")
         df = df.join(group_counts, on="group_id")
         df.loc[df["group_count"] <= 1, "group_id"] = np.nan
-        if df["group_id"].isna().any():  # type: ignore
+        if df["group_id"].isna().all():  # type: ignore
             groups = None
         else:
+            df = df[df["group_id"].notna()]
             groups = (
                 df["group_id"].astype("category").cat.codes.to_numpy()  # type: ignore
             )
-            df = df[df["group_id"].notna()]
 
         if df["answer_type"].isna().any():  # type: ignore
             answer_types = None
