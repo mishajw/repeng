@@ -2,7 +2,7 @@ from typing import Literal, get_args
 
 from pydantic import BaseModel
 
-Split = Literal["train", "validation"]
+Split = Literal["train", "train-hparams", "validation"]
 
 DatasetId = Literal[
     "arc_challenge",

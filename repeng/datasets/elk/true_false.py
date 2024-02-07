@@ -7,7 +7,7 @@ import requests
 
 from repeng.datasets.elk.types import BinaryRow
 from repeng.datasets.utils.shuffles import deterministic_shuffle
-from repeng.datasets.utils.splits import get_split
+from repeng.datasets.utils.splits import split_to_all
 
 _DATASET_ID = "true_false"
 
@@ -23,7 +23,7 @@ def get_true_false_dataset() -> dict[str, BinaryRow]:
             assert isinstance(index, int)
             result[f"{csv_name}-{index}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
-                split=get_split(_DATASET_ID, f"{csv_name}-{index}"),
+                split=split_to_all(_DATASET_ID, f"{csv_name}-{index}"),
                 text=cast(str, row["statement"]),
                 is_true=row["label"] == 1,
                 format_args=dict(),

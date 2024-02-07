@@ -4,6 +4,7 @@ import datasets
 
 from repeng.datasets.elk.types import BinaryRow, Split
 from repeng.datasets.utils.shuffles import deterministic_shuffle
+from repeng.datasets.utils.splits import split_train
 
 _DATASET_ID = "common_sense_qa"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.6.
@@ -34,7 +35,7 @@ def _get_common_sense_qa_split(split: Split) -> dict[str, BinaryRow]:
             format_args = dict(question=row["question"], answer=choice)
             results[f"{_DATASET_ID}-{group_id}-{choice_label}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
-                split=split,
+                split=split_train(split, seed=_DATASET_ID, row_id=group_id),
                 group_id=group_id,
                 text=_TEMPLATE.format(**format_args),
                 is_true=row["answerKey"] == choice_label,

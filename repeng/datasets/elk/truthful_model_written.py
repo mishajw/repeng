@@ -5,7 +5,7 @@ import jsonlines
 from repeng.datasets import data
 from repeng.datasets.elk.types import BinaryRow
 from repeng.datasets.utils.shuffles import deterministic_shuffle
-from repeng.datasets.utils.splits import get_split
+from repeng.datasets.utils.splits import split_to_all
 
 _DATASET_ID = "truthful_model_written"
 _TEMPLATE = (
@@ -28,7 +28,7 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
                 results[f"{key}-{answer}"] = BinaryRow(
                     dataset_id=_DATASET_ID,
                     group_id=row["key"],
-                    split=get_split(_DATASET_ID, row["key"]),
+                    split=split_to_all(_DATASET_ID, row["key"]),
                     text=text,
                     is_true=(row["value"]["honest"] and answer)
                     or (not row["value"]["honest"] and not answer),

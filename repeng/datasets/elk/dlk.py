@@ -5,6 +5,7 @@ from datasets import load_dataset
 
 from repeng.datasets.elk.types import BinaryRow, DlkDatasetId, Split
 from repeng.datasets.utils.shuffles import deterministic_shuffle
+from repeng.datasets.utils.splits import split_train
 
 
 @dataclass
@@ -87,7 +88,7 @@ def _get_dlk_dataset(
             prompt = template.template.format(**format_args)
             results[f"{dataset_id}-{row_idx}-{label_idx}-{split}"] = BinaryRow(
                 dataset_id=dataset_id,
-                split=split,
+                split=split_train(split, seed=dataset_id, row_id=str(row_idx)),
                 group_id=str(row_idx),
                 text=prompt,
                 is_true=label == true_label,

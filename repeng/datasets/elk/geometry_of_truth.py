@@ -4,7 +4,7 @@ import pandas as pd
 
 from repeng.datasets.elk.types import BinaryRow, DatasetId
 from repeng.datasets.utils.shuffles import deterministic_shuffle
-from repeng.datasets.utils.splits import get_split
+from repeng.datasets.utils.splits import split_to_all
 
 Subset = Literal[
     "cities",
@@ -74,7 +74,7 @@ def _get_paired(
             result[f"{dataset_id}-{index}-{answer_type}"] = BinaryRow(
                 dataset_id=dataset_id,
                 group_id=str(index),
-                split=get_split(dataset_id, str(index)),
+                split=split_to_all(dataset_id, str(index)),
                 text=cast(str, row["statement"]),
                 is_true=row["label"] == 1,
                 format_args=dict(),
@@ -93,7 +93,7 @@ def _get_unpaired(
         assert isinstance(index, int)
         result[f"{dataset_id}-{index}"] = BinaryRow(
             dataset_id=dataset_id,
-            split=get_split(dataset_id, str(index)),
+            split=split_to_all(dataset_id, str(index)),
             text=cast(str, row["statement"]),
             is_true=row["label"] == 1,
             format_args=dict(),
