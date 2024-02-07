@@ -17,23 +17,24 @@ _TEMPLATE = (
 
 
 def get_truthful_qa() -> dict[str, BinaryRow]:
-    dataset: Any = datasets.load_dataset("truthful_qa", "generation")
+    dataset: Any = datasets.load_dataset("truthful_qa", "multiple_choice")
     results = {}
     for group_id, row in deterministic_shuffle(
         enumerate(dataset["validation"]), lambda row: str(row[0])
     ):
-        answers = [
-            *[(answer, True) for answer in row["correct_answers"]],
-            *[(answer, False) for answer in row["incorrect_answers"]],
-        ]
-        for answer_idx, (answer, is_correct) in enumerate(answers):
+        for answer_idx, (answer, is_correct) in enumerate(
+            zip(
+                row["mc1_targets"]["choices"],
+                row["mc1_targets"]["labels"],
+            )
+        ):
             format_args = dict(question=row["question"], answer=answer)
             results[f"{_DATASET_ID}-{group_id}-{answer_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
                 split=get_split(_DATASET_ID, str(group_id)),
                 group_id=str(group_id),
                 text=_TEMPLATE.format(**format_args),
-                is_true=is_correct,
+                is_true=is_correct == 1,
                 format_args=format_args,
             )
     return results
