@@ -24,6 +24,7 @@ def create_activations_dataset(
     llm_ids: list[LlmId],
     dataset_ids: list[DatasetId],
     num_samples_per_dataset: int,
+    num_hparams_samples_per_dataset: int,
     num_validation_samples_per_dataset: int,
     device: torch.device,
     num_tokens_from_end: int | None,
@@ -40,6 +41,7 @@ def create_activations_dataset(
         .filter(
             limit_dataset_and_split_fn(
                 train_limit=num_samples_per_dataset,
+                train_hparams_limit=num_hparams_samples_per_dataset,
                 validation_limit=num_validation_samples_per_dataset,
             )
         )
