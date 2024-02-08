@@ -435,4 +435,3 @@ fig = px.bar(
 fig.update_layout(height=600, width=800, showlegend=False)
 fig.write_image(path / "q1_dataset_generalization.png")
 fig.show()
-df[["train_dataset", "train_subset"]].value_counts()

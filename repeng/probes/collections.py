@@ -3,11 +3,12 @@ from typing import Literal
 from repeng.activations.probe_preparations import ActivationArrays
 from repeng.probes.base import BaseProbe
 from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
+from repeng.probes.difference_in_means import train_dim_probe
 from repeng.probes.linear_artificial_tomography import train_lat_probe
+from repeng.probes.linear_discriminant_analysis import train_lda_probe
 from repeng.probes.logistic_regression import train_grouped_lr_probe, train_lr_probe
-from repeng.probes.mean_mass_probe import train_mmp_probe
 
-ProbeMethod = Literal["ccs", "lat", "mmp", "mmp-iid", "lr", "lr-grouped"]
+ProbeMethod = Literal["ccs", "lat", "dim", "lda", "lr", "lr-grouped"]
 
 
 def train_probe(
@@ -28,17 +29,15 @@ def train_probe(
         return train_lat_probe(
             activations=arrays.activations,
         )
-    elif probe_method == "mmp":
-        return train_mmp_probe(
+    elif probe_method == "dim":
+        return train_dim_probe(
             activations=arrays.activations,
             labels=arrays.labels,
-            use_iid=False,
         )
-    elif probe_method == "mmp-iid":
-        return train_mmp_probe(
+    elif probe_method == "lda":
+        return train_lda_probe(
             activations=arrays.activations,
             labels=arrays.labels,
-            use_iid=True,
         )
     elif probe_method == "lr":
         return train_lr_probe(

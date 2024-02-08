@@ -1,25 +1,27 @@
 """
-Replication of mean-mass probes (MMP) described in <https://arxiv.org/abs/2310.06824>.
+Replication of linear discriminant analysis (LDA) probes.
+
+See LDA probes in <https://arxiv.org/abs/2312.01037v1> and MMP-IID described in
+<https://arxiv.org/abs/2310.06824>.
 """
+
 import numpy as np
 from jaxtyping import Bool, Float
 
 from repeng.probes.base import DotProductProbe
 
 
-def train_mmp_probe(
+# TODO: Finding the inverse of the covariance matrix is really slow on big datasets and
+# and big hidden dimensions. Speed this up!
+def train_lda_probe(
     *,
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
-    use_iid: bool,
 ) -> DotProductProbe:
     _, hidden_dim = activations.shape
     mean_true = activations[labels].mean(axis=0)
     mean_false = activations[~labels].mean(axis=0)
     direction = mean_true - mean_false
-    if not use_iid:
-        return DotProductProbe(direction)
-
     centered_activations = np.concatenate(
         [
             activations[labels] - mean_true,
