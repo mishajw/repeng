@@ -316,7 +316,7 @@ results = run_pipeline(
     train_datasets=[DatasetIdFilter("arc_easy")],
     eval_datasets=[DatasetIdFilter("arc_easy")],
     probe_methods=["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"],
-    point_skip=6,
+    point_skip=None,
 )
 df = to_dataframe(results).sort_values(["is_supervised", "probe_method", "point_name"])
 px.line(
@@ -435,4 +435,52 @@ fig = px.bar(
 )
 fig.update_layout(height=600, width=800, showlegend=False)
 fig.write_image(path / "q1_dataset_generalization.png")
+fig.show()
+
+# %%
+"""
+Q2: Do simple datasets outperform complex datasets?
+"""
+results = run_pipeline(
+    llm_ids=["Llama-2-7b-chat-hf"],
+    train_datasets=[
+        DatasetIdFilter(dataset)
+        for collection in ["dlk", "repe", "got"]
+        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+    ],
+    eval_datasets=[
+        DatasetCollectionIdFilter("dlk-val"),
+        DatasetCollectionIdFilter("repe-val"),
+        DatasetCollectionIdFilter("got-val"),
+        DatasetIdFilter("truthful_qa"),
+    ],
+    probe_methods=["lr", "pca-g"],
+    point_skip=4,
+)
+
+df = to_dataframe(results)
+df = select_best(df, "point_name", "accuracy_hparams")
+df["is_simple"] = df["train_dataset"].apply(lambda d: d in got_datasets)
+best_train_datasets = df.groupby(
+    list(DIMS - {"train_dataset", "point_name"} | {"is_simple"})
+)["accuracy_hparams"].idxmax()
+df = df.loc[best_train_datasets]
+
+fig = px.bar(
+    df,
+    title="Q2: Do simple datasets and supervised methods improve generalisation?",
+    x="eval_dataset",
+    y="accuracy",
+    color="eval_dataset",
+    facet_col="is_supervised",
+    facet_row="is_simple",
+    text="accuracy",
+    category_orders={
+        "train_group": ["dlk-repe", "got"],
+        "eval_dataset": ["dlk-val", "repe-val", "got-val", "truthful_qa"],
+    },
+)
+fig.update_layout(height=500, width=800, showlegend=False)
+fig.update_traces(texttemplate="%{text:.1%}")
+fig.write_image(path / "q2_simple_vs_complex.png")
 fig.show()
