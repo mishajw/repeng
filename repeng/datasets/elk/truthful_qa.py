@@ -4,7 +4,7 @@ import datasets
 
 from repeng.datasets.elk.types import BinaryRow
 from repeng.datasets.utils.shuffles import deterministic_shuffle
-from repeng.datasets.utils.splits import split_to_all
+from repeng.datasets.utils.splits import split_validation
 
 _DATASET_ID = "truthful_qa"
 # Taken from https://arxiv.org/abs/2310.01405 D.1.1.
@@ -31,7 +31,7 @@ def get_truthful_qa() -> dict[str, BinaryRow]:
             format_args = dict(question=row["question"], answer=answer)
             results[f"{_DATASET_ID}-{group_id}-{answer_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
-                split=split_to_all(_DATASET_ID, str(group_id)),
+                split=split_validation(_DATASET_ID, str(group_id)),
                 group_id=str(group_id),
                 text=_TEMPLATE.format(**format_args),
                 is_true=is_correct == 1,
