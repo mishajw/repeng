@@ -32,8 +32,11 @@ def eval_logits_by_row(
     logits: Float[np.ndarray, "n"],  # noqa: F821
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> RowsEvalResult:
-    # TODO: Should we infer the threshold from the ROC?
-    labels_pred = logits > 0
+    fpr, tpr, thresholds = sklearn.metrics.roc_curve(labels, logits)
+    best_idx = np.argmin(np.sqrt((1 - tpr) ** 2 + fpr**2))
+    threshold = thresholds[best_idx]
+
+    labels_pred = logits > threshold
     f1_score = sklearn.metrics.f1_score(
         labels,
         labels_pred,
@@ -52,7 +55,6 @@ def eval_logits_by_row(
     accuracy = sklearn.metrics.accuracy_score(labels, labels_pred)
     predicted_true = labels_pred.mean().item()
     roc_auc_score = sklearn.metrics.roc_auc_score(labels, logits)
-    fpr, tpr, _ = sklearn.metrics.roc_curve(labels, logits)
     assert (
         isinstance(f1_score, float)
         and isinstance(precision, float)
