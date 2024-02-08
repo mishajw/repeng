@@ -11,8 +11,9 @@ from repeng.probes.principal_component_analysis import (
     train_grouped_pca_probe,
     train_pca_probe,
 )
+from repeng.probes.random import train_random_probe
 
-ProbeMethod = Literal["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g"]
+ProbeMethod = Literal["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"]
 
 
 def train_probe(
@@ -66,6 +67,10 @@ def train_probe(
         return train_grouped_pca_probe(
             activations=arrays.activations,
             groups=arrays.groups,
+        )
+    elif probe_method == "rand":
+        return train_random_probe(
+            activations=arrays.activations,
         )
     else:
         raise ValueError(f"Unknown probe_method: {probe_method}")

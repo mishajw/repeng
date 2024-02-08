@@ -1,8 +1,9 @@
 """
-Replication of LAT probes described in <https://arxiv.org/abs/2310.01405>.
-See appendix C.1
-"""
+Implementation of PCA based probes.
 
+Grouped PCA probe is equivalent to CRC-TPC described in
+<https://arxiv.org/abs/2212.03827>.
+"""
 
 import numpy as np
 from jaxtyping import Float
