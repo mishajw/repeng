@@ -4,18 +4,18 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from jaxtyping import Float
+from tqdm import tqdm
 
-from repeng.activations.probe_preparations import (
-    Activation,
-    prepare_activations_for_probes,
+from repeng.activations.probe_preparations import ActivationArrays
+from repeng.probes.base import DotProductProbe
+from repeng.probes.collections import ProbeMethod, train_probe
+from repeng.probes.contrast_consistent_search import (
+    CcsProbe,
+    CcsTrainingConfig,
+    train_ccs_probe,
 )
-from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_ccs_probe
-from repeng.probes.linear_artificial_tomography import (
-    LatTrainingConfig,
-    train_lat_probe,
-)
-from repeng.probes.logistic_regression import train_lr_probe
-from repeng.probes.mean_mass_probe import train_mmp_probe
+from repeng.probes.linear_artificial_tomography import train_lat_probe
+from repeng.probes.logistic_regression import LogisticRegressionProbe, train_lr_probe
 
 # %%
 anisotropy_offset = np.array([0, 0], dtype=np.float32)
@@ -33,33 +33,40 @@ random_true = random_false + np.random.multivariate_normal(
 )
 
 df_1 = pd.DataFrame(random_true, columns=["x", "y"])
-df_1["label"] = "true"
+df_1["label"] = True
 df_1["pair_id"] = np.array(range(num_samples))
 df_2 = pd.DataFrame(random_false, columns=["x", "y"])
-df_2["label"] = "false"
+df_2["label"] = False
 df_2["pair_id"] = np.array(range(num_samples))
 df = pd.concat([df_1, df_2])
 df["activations"] = df.apply(lambda row: np.array([row["x"], row["y"]]), axis=1)
 
+arrays = ActivationArrays(
+    activations=np.stack(df["activations"]),  # type: ignore
+    labels=df["label"].to_numpy(),
+    groups=df["pair_id"].to_numpy(),
+    answer_types=None,
+)
+
 # %%
-activations = prepare_activations_for_probes(
-    [
-        Activation(
-            dataset_id="test",
-            group_id=row["pair_id"],
-            activations=row["activations"],
-            label=row["label"] == "true",
-        )
-        for _, row in df.iterrows()
-    ]
-)
-lat_probe = train_lat_probe(
-    activations.activations, LatTrainingConfig(num_random_pairs=1000)
-)
-lr_probe = train_lr_probe(activations.labeled)
-mmp_probe = train_mmp_probe(activations.labeled, use_iid=False)
-mmp_iid_probe = train_mmp_probe(activations.labeled, use_iid=True)
-ccs_probe = train_ccs_probe(activations.grouped, CcsTrainingConfig(num_steps=1000))
+probe_methods: list[ProbeMethod] = [
+    "ccs",
+    "lat",
+    "dim",
+    "lda",
+    "lr",
+    "lr-g",
+    "pca",
+    "pca-g",
+    "rand",
+]
+probes = {
+    probe_method: train_probe(
+        probe_method,
+        arrays,
+    )
+    for probe_method in tqdm(probe_methods)
+}
 
 # %%
 fig_start = -2
@@ -89,14 +96,24 @@ fig.update_layout(
     yaxis_range=[fig_start, fig_end],
 )
 fig.update_yaxes(scaleanchor="x", scaleratio=1)
-plot_probe("lat", fig, lat_probe.probe, 0)
-plot_probe("lr", fig, lr_probe.model.coef_[0], lr_probe.model.intercept_[0])
-plot_probe("mmp", fig, mmp_probe.probe, 0)
-plot_probe("mmp-iid", fig, mmp_iid_probe.probe, 0)
-plot_probe(
-    "ccs",
-    fig,
-    ccs_probe.linear.weight.detach().numpy()[0],
-    ccs_probe.linear.bias.detach().numpy()[0],
-)
+for probe_method, probe in probes.items():
+    assert probe is not None
+    if isinstance(probe, DotProductProbe):
+        plot_probe(probe_method, fig, probe.probe, 0)
+    elif isinstance(probe, LogisticRegressionProbe):
+        plot_probe(
+            probe_method,
+            fig,
+            probe.model.coef_[0],
+            probe.model.intercept_[0],
+        )
+    elif isinstance(probe, CcsProbe):
+        plot_probe(
+            probe_method,
+            fig,
+            probe.linear.weight.detach().numpy()[0],
+            probe.linear.bias.detach().numpy()[0],
+        )
+    else:
+        raise ValueError(type(probe))
 fig.show()
