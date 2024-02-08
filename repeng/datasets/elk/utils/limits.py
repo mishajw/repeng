@@ -5,6 +5,19 @@ from typing import Callable
 from repeng.datasets.elk.types import BinaryRow, DatasetId, Split
 
 
+@dataclass
+class Limits:
+    default: "SplitLimits"
+    by_dataset: dict[DatasetId, "SplitLimits"]
+
+
+@dataclass
+class SplitLimits:
+    train: int | None
+    train_hparams: int | None
+    validation: int | None
+
+
 @dataclass(frozen=True)
 class _DatasetAndSplit:
     dataset_id: DatasetId
@@ -12,32 +25,49 @@ class _DatasetAndSplit:
     template_name: str | None = None
 
 
-def limit_dataset_and_split_fn(
-    *,
-    train_limit: int,
-    train_hparams_limit: int,
-    validation_limit: int,
-    limit_templates_separately: bool = True,
-) -> Callable[[str, BinaryRow], bool]:
-    counts: dict[_DatasetAndSplit, int] = defaultdict(int)
+@dataclass
+class _GroupCount:
+    groups: set[str]
+    num_nones: int
 
-    def limit(split: Split) -> int:
-        if split == "train":
-            return train_limit
-        elif split == "train-hparams":
-            return train_hparams_limit
-        elif split == "validation":
-            return validation_limit
+    def add(self, group_id: str | None) -> None:
+        if group_id is None:
+            self.num_nones += 1
         else:
-            raise ValueError()
+            self.groups.add(group_id)
 
-    def fn(_: str, row: BinaryRow) -> bool:
+    def count(self) -> int:
+        return len(self.groups) + self.num_nones
+
+
+def limit_groups(limits: Limits) -> Callable[[str, BinaryRow], bool]:
+    group_counts: dict[_DatasetAndSplit, _GroupCount] = defaultdict(
+        lambda: _GroupCount(set(), 0)
+    )
+
+    def fn(_, row: BinaryRow) -> bool:
         dataset_and_split = _DatasetAndSplit(
             dataset_id=row.dataset_id,
             split=row.split,
-            template_name=row.template_name if limit_templates_separately else None,
         )
-        counts[dataset_and_split] += 1
-        return counts[dataset_and_split] <= limit(row.split)
+
+        if row.dataset_id not in limits.by_dataset:
+            split_limits = limits.default
+        else:
+            split_limits = limits.by_dataset[row.dataset_id]
+
+        if row.split == "train":
+            limit = split_limits.train
+        elif row.split == "train-hparams":
+            limit = split_limits.train_hparams
+        elif row.split == "validation":
+            limit = split_limits.validation
+        else:
+            raise ValueError()
+
+        if limit is None:
+            return True
+        group_counts[dataset_and_split].add(row.group_id)
+        return group_counts[dataset_and_split].count() <= limit
 
     return fn

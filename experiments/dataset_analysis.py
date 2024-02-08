@@ -45,9 +45,9 @@ px.bar(
 
 # %%
 px.bar(
-    df.groupby(["dataset_id", "split"])["group_id"]
+    df.groupby(["dataset_id", "split"])["group_id"]  # type: ignore
     .nunique()
-    .rename("num_groups")
+    .rename("num_groups")  # type: ignore
     .reset_index(),
     title="Num groups by dataset & split",
     x="dataset_id",

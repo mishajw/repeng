@@ -31,7 +31,7 @@ def get_truthful_qa() -> dict[str, BinaryRow]:
             format_args = dict(question=row["question"], answer=answer)
             results[f"{_DATASET_ID}-{group_id}-{answer_idx}"] = BinaryRow(
                 dataset_id=_DATASET_ID,
-                split=split_validation(_DATASET_ID, str(group_id)),
+                split=split_validation(seed=_DATASET_ID, row_id=str(group_id)),
                 group_id=str(group_id),
                 text=_TEMPLATE.format(**format_args),
                 is_true=is_correct == 1,

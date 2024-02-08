@@ -67,11 +67,6 @@ class BinaryRow(BaseModel, extra="forbid"):
     Rows are grouped, for example by question, in order to allow for probes that take
     into account intra-group relationships.
     """
-    template_name: str | None = None
-    """
-    The name of the template used in the generation of this row.
-    If not set, typically there are no alternative templates for the row.
-    """
     answer_type: str | None = None
     """
     For example, 'true' and 'false' for answers to true/false questions, or 'A', 'B',
