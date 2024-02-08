@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from repeng.activations.probe_preparations import ActivationArrayDataset
 from repeng.datasets.activations.types import ActivationResultRow
-from repeng.datasets.elk.types import DatasetId
+from repeng.datasets.elk.types import DatasetId, Split
 from repeng.datasets.elk.utils.collections import (
     DatasetCollectionId,
     DatasetCollectionIdFilter,
@@ -82,9 +82,7 @@ class PipelineResultRow(BaseModel, extra="forbid"):
     point_name: str
     token_idx: int
     accuracy: float
-    row_accuracy: float
-    row_roc_auc: float
-    question_accuracy: float | None
+    accuracy_hparams: float
 
 
 token_idxs: list[int] = [-1]
@@ -155,25 +153,6 @@ def run_pipeline(
 
 
 def _eval_probe(_: str, spec: EvalSpec) -> PipelineResultRow:
-    arrays = dataset.get(
-        llm_id=spec.train_spec.llm_id,
-        dataset_filter=spec.dataset,
-        split="validation",
-        point_name=spec.train_spec.point_name,
-        token_idx=spec.train_spec.token_idx,
-        limit=100,
-    )
-    row_result = eval_probe_by_row(
-        spec.probe, activations=arrays.activations, labels=arrays.labels
-    )
-    question_result = None
-    if arrays.groups is not None:
-        question_result = eval_probe_by_question(
-            spec.probe,
-            activations=arrays.activations,
-            labels=arrays.labels,
-            groups=arrays.groups,
-        )
     return PipelineResultRow(
         llm_id=spec.train_spec.llm_id,
         train_dataset=spec.train_spec.dataset.get_name(),
@@ -181,11 +160,43 @@ def _eval_probe(_: str, spec: EvalSpec) -> PipelineResultRow:
         probe_method=spec.train_spec.probe_method,
         point_name=spec.train_spec.point_name,
         token_idx=spec.train_spec.token_idx,
-        accuracy=question_result.accuracy if question_result else row_result.accuracy,
-        row_accuracy=row_result.accuracy,
-        question_accuracy=question_result.accuracy if question_result else None,
-        row_roc_auc=row_result.roc_auc_score,
+        accuracy=_eval_probe_on_split(
+            spec.probe, spec.train_spec, spec.dataset, "validation"
+        ),
+        accuracy_hparams=_eval_probe_on_split(
+            spec.probe, spec.train_spec, spec.dataset, "train"
+        ),
     )
+
+
+def _eval_probe_on_split(
+    probe: BaseProbe,
+    train_spec: TrainSpec,
+    eval_dataset: DatasetFilter,
+    split: Split,
+) -> float:
+    arrays = dataset.get(
+        llm_id=train_spec.llm_id,
+        dataset_filter=eval_dataset,
+        split=split,
+        point_name=train_spec.point_name,
+        token_idx=train_spec.token_idx,
+        limit=100,
+    )
+    question_result = None
+    if arrays.groups is not None:
+        question_result = eval_probe_by_question(
+            probe,
+            activations=arrays.activations,
+            labels=arrays.labels,
+            groups=arrays.groups,
+        )
+        return question_result.accuracy
+    else:
+        row_result = eval_probe_by_row(
+            probe, activations=arrays.activations, labels=arrays.labels
+        )
+        return row_result.accuracy
 
 
 # %%
@@ -310,7 +321,7 @@ df = to_dataframe(results)
 px.line(
     df,
     x="point_name",
-    y="question_accuracy",
+    y="accuracy",
     color="probe_method",
     line_dash="is_supervised",
 )
@@ -385,7 +396,7 @@ df_single["train_dataset"] = df_single["train_dataset"].apply(
     lambda d: "dlk" if d in dlk_datasets else "repe" if d in repe_datasets else "got"
 )
 best_train_dataset_idxs = df_single.groupby(list(DIMS - {"point_name"}))[
-    "accuracy"
+    "accuracy_hparams"
 ].idxmax()
 df_single = df_single.loc[best_train_dataset_idxs]
 df_single["train_subset"] = "single-best"
@@ -404,7 +415,7 @@ df_multi["accuracy_max"] = df_multi["accuracy_max"] - df_multi["accuracy"]
 df_multi["single_best"] = False
 
 df = pd.concat([df_multi, df_single])
-df = select_best(df, "point_name", "accuracy", extra_dims=["train_subset"])
+df = select_best(df, "point_name", "accuracy_hparams", extra_dims=["train_subset"])
 fig = px.bar(
     df,
     title="Q1: Does adding more datasets improve generalization?",

@@ -15,32 +15,11 @@ DatasetCollectionId = Literal[
     "repe-val",
     "got",
     "got-val",
-    "multis",
 ]
 
 _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
     "all": DatasetCollectionFilter(
         "all", cast(list[DatasetId], list(get_args(DatasetId)))
-    ),
-    "multis": DatasetCollectionFilter(
-        "dlk-repe-got",
-        [
-            "imdb",
-            "amazon_polarity",
-            "ag_news",
-            "dbpedia_14",
-            "rte",
-            "copa",
-            "piqa",
-            "open_book_qa",
-            "race",
-            "arc_challenge",
-            "arc_easy",
-            "geometry_of_truth/cities",
-            "geometry_of_truth/sp_en_trans",
-            "geometry_of_truth/cities_cities_conj",
-            "geometry_of_truth/cities_cities_disj",
-        ],
     ),
     "dlk": DatasetCollectionFilter(
         "dlk",
