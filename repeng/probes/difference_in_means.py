@@ -16,7 +16,6 @@ def train_dim_probe(
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> DotProductProbe:
-    _, hidden_dim = activations.shape
     mean_true = activations[labels].mean(axis=0)
     mean_false = activations[~labels].mean(axis=0)
     direction = mean_true - mean_false
