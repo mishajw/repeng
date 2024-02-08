@@ -16,7 +16,6 @@ def train_dim_probe(
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> DotProductProbe:
-    mean_true = activations[labels].mean(axis=0)
-    mean_false = activations[~labels].mean(axis=0)
-    direction = mean_true - mean_false
-    return DotProductProbe(direction)
+    return DotProductProbe(
+        activations[labels].mean(axis=0) - activations[~labels].mean(axis=0)
+    )
