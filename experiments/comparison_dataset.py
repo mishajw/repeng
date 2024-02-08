@@ -5,11 +5,12 @@ from repeng.datasets.elk.types import DatasetId
 from repeng.datasets.elk.utils.collections import resolve_dataset_ids
 from repeng.datasets.elk.utils.limits import Limits, SplitLimits
 
-(dlk_val,) = resolve_dataset_ids("dlk-val")
-(repe_val,) = resolve_dataset_ids("repe-val")
-(got_val,) = resolve_dataset_ids("got-val")
-validation_only_datasets: list[DatasetId] = [dlk_val, repe_val, got_val, "truthful_qa"]
-
+validation_only_datasets: list[DatasetId] = [
+    *resolve_dataset_ids("dlk-val"),
+    *resolve_dataset_ids("repe-val"),
+    *resolve_dataset_ids("got-val"),
+    "truthful_qa",
+]
 create_activations_dataset(
     tag="datasets_2024-02-07_v1",
     llm_ids=["Llama-2-7b-chat-hf"],
