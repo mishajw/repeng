@@ -15,9 +15,14 @@ def eval_logits_by_question(
     for group in np.unique(groups):
         group_labels = labels[groups == group].copy()
         group_logits = logits[groups == group].copy()
+        max_logit = np.max(group_logits)
+        # Instead of just doing argmax, we randomly select among the max logits. This is
+        # because some of the datasets always have the correct answer first, so
+        # outputting identical logits for all answers would have 100% accuracy.
+        max_idx = np.random.choice(np.where(group_logits == max_logit)[0])
         # N.B.: Some datasets have multiple correct answers per question. This is fine,
         # we just check that one of the correct answers was chosen.
-        correct.append(group_labels[np.argmax(group_logits)])
+        correct.append(group_labels[max_idx])  # type: ignore
     accuracy = sum(correct) / len(correct)
     return QuestionsEvalResult(accuracy=accuracy, is_flipped=False)
 
