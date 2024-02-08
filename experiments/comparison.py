@@ -284,6 +284,9 @@ DIMS = {
     "point_name",
     "token_idx",
 }
+DLK_DATASETS = resolve_dataset_ids("dlk")
+REPE_DATASETS = resolve_dataset_ids("repe")
+GOT_DATASETS = resolve_dataset_ids("got")
 
 
 def to_dataframe(
@@ -316,7 +319,7 @@ results = run_pipeline(
     train_datasets=[DatasetIdFilter("arc_easy")],
     eval_datasets=[DatasetIdFilter("arc_easy")],
     probe_methods=["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"],
-    point_skip=None,
+    point_skip=6,
 )
 df = to_dataframe(results).sort_values(["is_supervised", "probe_method", "point_name"])
 px.line(
@@ -388,13 +391,9 @@ results_single = run_pipeline(
     point_skip=4,
 )
 
-# %%
 df_single = to_dataframe(results_single)
-dlk_datasets = resolve_dataset_ids("dlk")
-repe_datasets = resolve_dataset_ids("repe")
-got_datasets = resolve_dataset_ids("got")
 df_single["train_dataset"] = df_single["train_dataset"].apply(
-    lambda d: "dlk" if d in dlk_datasets else "repe" if d in repe_datasets else "got"
+    lambda d: "dlk" if d in DLK_DATASETS else "repe" if d in REPE_DATASETS else "got"
 )
 best_train_dataset_idxs = df_single.groupby(list(DIMS - {"point_name"}))[
     "accuracy_hparams"
@@ -439,7 +438,144 @@ fig.show()
 
 # %%
 """
-Q2: Do simple datasets outperform complex datasets?
+Q2: Does using groups improve generalization?
+"""
+results = run_pipeline(
+    llm_ids=["Llama-2-7b-chat-hf"],
+    train_datasets=[
+        DatasetIdFilter(dataset)
+        for collection in ["dlk", "repe", "got"]
+        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+    ],
+    eval_datasets=[
+        DatasetCollectionIdFilter("dlk-val"),
+        DatasetCollectionIdFilter("repe-val"),
+        DatasetCollectionIdFilter("got-val"),
+        DatasetIdFilter("truthful_qa"),
+    ],
+    probe_methods=["lr", "lr-g", "pca", "pca-g"],
+    point_skip=4,
+)
+
+df = to_dataframe(results)
+best_datasets_and_points = df.groupby(list(DIMS - {"train_dataset", "point_name"}))[
+    "accuracy_hparams"
+].idxmax()
+df = df.loc[best_datasets_and_points]
+df["probe_category"] = df["probe_method"].apply(lambda p: p.split("-")[0])
+df["is_grouped"] = df["probe_method"].apply(lambda p: p.endswith("-g"))
+
+fig = px.bar(
+    df,
+    title="Q2: Does using groups improve generalization?",
+    x="is_grouped",
+    y="accuracy",
+    color="is_grouped",
+    text="accuracy",
+    facet_col="eval_dataset",
+    facet_row="probe_category",
+    category_orders={
+        "eval_dataset": ["dlk-val", "repe-val", "got-val", "truthful_qa"],
+    },
+)
+fig.update_layout(height=500, width=800, showlegend=False)
+fig.update_traces(texttemplate="%{text:.1%}")
+fig.write_image(path / "q2_groups.png")
+fig.show()
+
+
+# %%
+"""
+Q3: What supervised probe generalises best?
+"""
+results = run_pipeline(
+    llm_ids=["Llama-2-7b-chat-hf"],
+    train_datasets=[
+        DatasetIdFilter(dataset)
+        for collection in ["dlk", "repe", "got"]
+        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+    ],
+    eval_datasets=[
+        DatasetCollectionIdFilter("dlk-val"),
+        DatasetCollectionIdFilter("repe-val"),
+        DatasetCollectionIdFilter("got-val"),
+        DatasetIdFilter("truthful_qa"),
+    ],
+    probe_methods=["dim", "lda", "lr", "lr-g"],
+    point_skip=4,
+)
+
+df = to_dataframe(results)
+best_datasets_and_points = df.groupby(list(DIMS - {"train_dataset", "point_name"}))[
+    "accuracy_hparams"
+].idxmax()
+df = df.loc[best_datasets_and_points]
+
+fig = px.bar(
+    df,
+    title="Q3: What supervised probe generalises best?",
+    x="probe_method",
+    y="accuracy",
+    text="accuracy",
+    color="probe_method",
+    facet_col="eval_dataset",
+    category_orders={
+        "eval_dataset": ["dlk-val", "repe-val", "got-val", "truthful_qa"],
+    },
+)
+fig.update_layout(height=300, width=800, showlegend=False)
+fig.update_traces(texttemplate="%{text:.1%}")
+fig.write_image(path / "q3_supervised_probes.png")
+fig.show()
+
+# %%
+"""
+Q4: What unsupervised probe generalises best?
+"""
+results = run_pipeline(
+    llm_ids=["Llama-2-7b-chat-hf"],
+    train_datasets=[
+        DatasetIdFilter(dataset)
+        for collection in ["dlk", "repe", "got"]
+        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+    ],
+    eval_datasets=[
+        DatasetCollectionIdFilter("dlk-val"),
+        DatasetCollectionIdFilter("repe-val"),
+        DatasetCollectionIdFilter("got-val"),
+        DatasetIdFilter("truthful_qa"),
+    ],
+    probe_methods=["ccs", "lat", "pca", "pca-g"],
+    point_skip=4,
+)
+
+df = to_dataframe(results)
+best_datasets_and_points = df.groupby(list(DIMS - {"train_dataset", "point_name"}))[
+    "accuracy_hparams"
+].idxmax()
+df = df.loc[best_datasets_and_points]
+
+fig = px.bar(
+    df,
+    title="Q4: What unsupervised probe generalises best?",
+    x="probe_method",
+    y="accuracy",
+    text="accuracy",
+    color="probe_method",
+    facet_col="eval_dataset",
+    category_orders={
+        "eval_dataset": ["dlk-val", "repe-val", "got-val", "truthful_qa"],
+    },
+)
+fig.update_layout(height=300, width=800, showlegend=False)
+fig.update_traces(texttemplate="%{text:.1%}")
+fig.write_image(path / "q4_unsupervised_probes.png")
+fig.show()
+
+
+# %%
+"""
+Q5: Do simple datasets outperform complex datasets?
 """
 results = run_pipeline(
     llm_ids=["Llama-2-7b-chat-hf"],
@@ -460,7 +596,7 @@ results = run_pipeline(
 
 df = to_dataframe(results)
 df = select_best(df, "point_name", "accuracy_hparams")
-df["is_simple"] = df["train_dataset"].apply(lambda d: d in got_datasets)
+df["is_simple"] = df["train_dataset"].apply(lambda d: d in GOT_DATASETS)
 best_train_datasets = df.groupby(
     list(DIMS - {"train_dataset", "point_name"} | {"is_simple"})
 )["accuracy_hparams"].idxmax()
@@ -468,7 +604,7 @@ df = df.loc[best_train_datasets]
 
 fig = px.bar(
     df,
-    title="Q2: Do simple datasets and supervised methods improve generalisation?",
+    title="Q5: Do simple datasets and supervised methods improve generalisation?",
     x="eval_dataset",
     y="accuracy",
     color="eval_dataset",
@@ -482,5 +618,5 @@ fig = px.bar(
 )
 fig.update_layout(height=500, width=800, showlegend=False)
 fig.update_traces(texttemplate="%{text:.1%}")
-fig.write_image(path / "q2_simple_vs_complex.png")
+fig.write_image(path / "q5_simple_vs_complex.png")
 fig.show()
