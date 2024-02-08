@@ -26,6 +26,11 @@ DatasetId = Literal[
     "copa",
     "boolq",
     "piqa",
+    "open_book_qa/qa",
+    "race/qa",
+    "arc_challenge/qa",
+    "arc_easy/qa",
+    "common_sense_qa/qa",
 ]
 
 DlkDatasetId = Literal[
@@ -74,6 +79,9 @@ class BinaryRow(BaseModel, extra="forbid"):
     If not set, the prompt template doesn't include any consistent answer templates
     (e.g. it's just question-answer).
     """
+
+
+RepeTemplateId = Literal["qa", "repe"]
 
 
 def is_dataset_grouped(dataset_id: DatasetId) -> bool:
