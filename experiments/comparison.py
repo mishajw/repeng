@@ -1,6 +1,5 @@
 # %%
 import random
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence, cast
@@ -40,18 +39,13 @@ Gets a pre-calculated dataset of activations.
 See experiments/comparison_2024-01-30.sh for the script that produced the dataset.
 """
 
-mcontext = MContext(Path("../output/comparison"))
-activation_results_nonchat: list[ActivationResultRow] = mcontext.download_cached(
-    "activations_results_nonchat",
-    path="s3://repeng/datasets/activations/datasets_2024-02-05_v3.pickle",
+path = Path("../output/comparison")
+mcontext = MContext(path)
+activation_results: list[ActivationResultRow] = mcontext.download_cached(
+    "activations_results",
+    path="s3://repeng/datasets/activations/datasets_2024-02-07_v1.pickle",
     to="pickle",
 ).get()
-activation_results_chat: list[ActivationResultRow] = mcontext.download_cached(
-    "activations_results_chat",
-    path="s3://repeng/datasets/activations/datasets_2024-02-05_v3_chat.pickle",
-    to="pickle",
-).get()
-activation_results = activation_results_nonchat + activation_results_chat
 print(set(row.llm_id for row in activation_results))
 print(set(row.dataset_id for row in activation_results))
 print(set(row.split for row in activation_results))
@@ -289,10 +283,13 @@ def to_dataframe(
     return df
 
 
-def select_best(df: pd.DataFrame, column: str, metric: str) -> pd.DataFrame:
+def select_best(
+    df: pd.DataFrame, column: str, metric: str, extra_dims: list[str] | None = None
+) -> pd.DataFrame:
+    extra_dims = extra_dims or []
     return (
         df.sort_values(metric, ascending=False)
-        .groupby(list(DIMS - {column}))
+        .groupby(list(DIMS - {column} | set(extra_dims)))
         .first()
         .reset_index()
     )
@@ -334,7 +331,7 @@ def sample(
     return random.sample(dataset_ids, k=k)
 
 
-train_datasets = [
+datasets_multi = [
     DatasetCollectionFilter(
         f"{dataset}-{size_name}-{i}", sample(dataset, seed=i, k=size)
     )
@@ -342,24 +339,32 @@ train_datasets = [
         ("dlk", [3, 5, None]),
         ("repe", [2, 3, None]),
         ("got", [2, 3, None]),
-        ("multis", [4, 8, None]),
     ]
     for size, n_iters, size_name in zip(
         sizes,
-        [3, 3, 1],
+        [5, 5, 1],
         ["small", "medium", "large"],
     )
     for i in range(n_iters)
 ]
-results = run_pipeline(
+results_multi = run_pipeline(
+    llm_ids=["Llama-2-7b-chat-hf"],
+    train_datasets=datasets_multi,
+    eval_datasets=[
+        DatasetCollectionIdFilter("dlk-val"),
+        DatasetCollectionIdFilter("repe-val"),
+        DatasetCollectionIdFilter("got-val"),
+        DatasetIdFilter("truthful_qa"),
+    ],
+    probe_methods=["lr"],
+    point_skip=4,
+)
+results_single = run_pipeline(
     llm_ids=["Llama-2-7b-chat-hf"],
     train_datasets=[
-        *train_datasets,
-        *[
-            DatasetIdFilter(dataset)
-            for collection in ["dlk", "repe", "got"]
-            for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-        ],
+        DatasetIdFilter(dataset)
+        for collection in ["dlk", "repe", "got"]
+        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
     ],
     eval_datasets=[
         DatasetCollectionIdFilter("dlk-val"),
@@ -367,44 +372,56 @@ results = run_pipeline(
         DatasetCollectionIdFilter("got-val"),
         DatasetIdFilter("truthful_qa"),
     ],
-    probe_methods=["lr", "lat"],
+    probe_methods=["lr"],
     point_skip=4,
 )
 
 # %%
-df = to_dataframe(results)
-df["train_dataset"] = df["train_dataset"].apply(lambda d: re.sub(r"-\d+$", "", d))
-df = (
-    df.groupby(list(DIMS))["accuracy"]
-    .agg(accuracy="mean", accuracy_std="std", count="count")  # type: ignore
-    .reset_index()
-)
-dlk_datasets = ["dlk-small", "dlk-medium", "dlk-large", *resolve_dataset_ids("dlk")]
-repe_datasets = [
-    "repe-small",
-    "repe-medium",
-    "repe-large",
-    *resolve_dataset_ids("repe"),
-]
-got_datasets = ["got-small", "got-medium", "got-large", *resolve_dataset_ids("got")]
-df["train_group"] = df["train_dataset"].apply(
+df_single = to_dataframe(results_single)
+dlk_datasets = resolve_dataset_ids("dlk")
+repe_datasets = resolve_dataset_ids("repe")
+got_datasets = resolve_dataset_ids("got")
+df_single["train_dataset"] = df_single["train_dataset"].apply(
     lambda d: "dlk" if d in dlk_datasets else "repe" if d in repe_datasets else "got"
 )
-df = select_best(df, "point_name", "accuracy")
+best_train_dataset_idxs = df_single.groupby(list(DIMS - {"point_name"}))[
+    "accuracy"
+].idxmax()
+df_single = df_single.loc[best_train_dataset_idxs]
+df_single["train_subset"] = "single-best"
+df_single["single_best"] = True
+
+df_multi = to_dataframe(results_multi)
+df_multi["train_subset"] = df_multi["train_dataset"].apply(lambda d: d.split("-")[1])
+df_multi["train_dataset"] = df_multi["train_dataset"].apply(lambda d: d.split("-")[0])
+df_multi = (
+    df_multi.groupby(list(DIMS | {"train_subset"}))["accuracy"]
+    .agg(accuracy="mean", accuracy_min="min", accuracy_max="max")  # type: ignore
+    .reset_index()
+)
+df_multi["accuracy_min"] = df_multi["accuracy"] - df_multi["accuracy_min"]
+df_multi["accuracy_max"] = df_multi["accuracy_max"] - df_multi["accuracy"]
+df_multi["single_best"] = False
+
+df = pd.concat([df_multi, df_single])
+df = select_best(df, "point_name", "accuracy", extra_dims=["train_subset"])
 fig = px.bar(
     df,
-    x="train_dataset",
+    title="Q1: Does adding more datasets improve generalization?",
+    x="train_subset",
     y="accuracy",
-    error_y="accuracy_std",
-    color="train_group",
+    error_y="accuracy_max",
+    error_y_minus="accuracy_min",
+    color="single_best",
     facet_col="eval_dataset",
-    facet_row="probe_method",
+    facet_row="train_dataset",
     category_orders={
-        "train_dataset": dlk_datasets + repe_datasets + got_datasets,
+        "train_dataset": ["dlk", "repe", "got"],
+        "train_subset": ["small", "medium", "large", "single-best"],
+        "eval_dataset": ["dlk-val", "repe-val", "got-val", "truthful_qa"],
     },
 )
-fig.update_layout(
-    height=800,
-    width=2000,
-)
+fig.update_layout(height=600, width=800, showlegend=False)
+fig.write_image(path / "q1_dataset_generalization.png")
 fig.show()
+df[["train_dataset", "train_subset"]].value_counts()
