@@ -290,7 +290,8 @@ def to_dataframe(
     results: Sequence[PipelineResultRow | LogprobsPipelineResultRow],
 ) -> pd.DataFrame:
     df = pd.DataFrame([row.model_dump() for row in results])
-    df["is_supervised"] = df["probe_method"].isin(["lr", "lr-grouped", "mmp"])
+    df["is_supervised"] = df["probe_method"].isin(["dim", "lda", "lr", "lr-g"])
+    df["point_name"] = df["point_name"].apply(lambda p: int(p.lstrip("h")))
     return df
 
 
@@ -314,10 +315,10 @@ results = run_pipeline(
     llm_ids=["Llama-2-7b-chat-hf"],
     train_datasets=[DatasetIdFilter("arc_easy")],
     eval_datasets=[DatasetIdFilter("arc_easy")],
-    probe_methods=["lr", "lat"],
-    point_skip=4,
+    probe_methods=["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"],
+    point_skip=6,
 )
-df = to_dataframe(results)
+df = to_dataframe(results).sort_values(["is_supervised", "probe_method", "point_name"])
 px.line(
     df,
     x="point_name",
