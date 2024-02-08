@@ -12,7 +12,7 @@ validation_only_datasets: list[DatasetId] = [
     "truthful_qa",
 ]
 create_activations_dataset(
-    tag="datasets_2024-02-07_v1",
+    tag="datasets_2024-02-08_v1",
     llm_ids=["Llama-2-7b-chat-hf"],
     dataset_ids=resolve_dataset_ids("all"),
     group_limits=Limits(
