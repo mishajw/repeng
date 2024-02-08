@@ -48,7 +48,13 @@ def train_lr_probe(
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> LogisticRegressionProbe:
-    model = LogisticRegression(max_iter=1000, fit_intercept=True)
+    model = LogisticRegression(
+        fit_intercept=True,
+        # We go for newton-cg as we've found it to be the fastest, see
+        # experiments/scratch/lr_speed.py.
+        solver="newton-cg",
+        max_iter=10_000,
+    )
     model.fit(activations, labels)
     return LogisticRegressionProbe(model)
 
