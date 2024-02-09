@@ -66,43 +66,43 @@ class DatasetCollectionFilter(DatasetFilter):
 
 
 DatasetFilterId = Literal[
-    "geometry_of_truth/cities/pos",
-    "geometry_of_truth/cities/neg",
-    "geometry_of_truth/sp_en_trans/pos",
-    "geometry_of_truth/sp_en_trans/neg",
-    "geometry_of_truth/larger_than/large",
-    "geometry_of_truth/larger_than/small",
+    "got_cities/pos",
+    "got_cities/neg",
+    "got_sp_en_trans/pos",
+    "got_sp_en_trans/neg",
+    "got_larger_than/large",
+    "got_larger_than/small",
 ]
 
-_DATASET_FILTER_FNS: dict[DatasetFilterId, DatasetFilter] = {
-    "geometry_of_truth/cities/pos": ExactMatchFilter(
-        "geometry_of_truth/cities/pos",
-        dataset_id="geometry_of_truth/cities",
+DATASET_FILTER_FNS: dict[DatasetFilterId, DatasetFilter] = {
+    "got_cities/pos": ExactMatchFilter(
+        "got_cities/pos",
+        dataset_id="got_cities",
         answer_type="pos",
     ),
-    "geometry_of_truth/cities/neg": ExactMatchFilter(
-        "geometry_of_truth/cities/neg",
-        dataset_id="geometry_of_truth/cities",
+    "got_cities/neg": ExactMatchFilter(
+        "got_cities/neg",
+        dataset_id="got_cities",
         answer_type="neg",
     ),
-    "geometry_of_truth/sp_en_trans/pos": ExactMatchFilter(
-        "geometry_of_truth/sp_en_trans/pos",
-        dataset_id="geometry_of_truth/sp_en_trans",
+    "got_sp_en_trans/pos": ExactMatchFilter(
+        "got_sp_en_trans/pos",
+        dataset_id="got_sp_en_trans",
         answer_type="pos",
     ),
-    "geometry_of_truth/sp_en_trans/neg": ExactMatchFilter(
-        "geometry_of_truth/sp_en_trans/neg",
-        dataset_id="geometry_of_truth/sp_en_trans",
+    "got_sp_en_trans/neg": ExactMatchFilter(
+        "got_sp_en_trans/neg",
+        dataset_id="got_sp_en_trans",
         answer_type="neg",
     ),
-    "geometry_of_truth/larger_than/large": ExactMatchFilter(
-        "geometry_of_truth/larger_than/large",
-        dataset_id="geometry_of_truth/larger_than",
+    "got_larger_than/large": ExactMatchFilter(
+        "got_larger_than/large",
+        dataset_id="got_larger_than",
         answer_type="pos",
     ),
-    "geometry_of_truth/larger_than/small": ExactMatchFilter(
-        "geometry_of_truth/larger_than/small",
-        dataset_id="geometry_of_truth/larger_than",
+    "got_larger_than/small": ExactMatchFilter(
+        "got_larger_than/small",
+        dataset_id="got_larger_than",
         answer_type="neg",
     ),
 }

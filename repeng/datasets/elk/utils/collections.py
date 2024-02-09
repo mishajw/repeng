@@ -47,13 +47,13 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
     "got": DatasetCollectionFilter(
         "got",
         [
-            "geometry_of_truth/cities",
-            "geometry_of_truth/sp_en_trans",
-            "geometry_of_truth/cities_cities_conj",
-            "geometry_of_truth/cities_cities_disj",
+            "got_cities",
+            "got_sp_en_trans",
+            "got_cities_cities_conj",
+            "got_cities_cities_disj",
         ],
     ),
-    "got-val": DatasetCollectionFilter("got-val", ["geometry_of_truth/larger_than"]),
+    "got-val": DatasetCollectionFilter("got-val", ["got_larger_than"]),
 }
 
 

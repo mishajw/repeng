@@ -20,33 +20,33 @@ _URL = "https://raw.githubusercontent.com/saprmarks/geometry-of-truth/91b2232/da
 def get_geometry_of_truth(subset: Subset) -> dict[str, BinaryRow]:
     if subset == "cities":
         return _get_paired(
-            dataset_id="geometry_of_truth/cities",
+            dataset_id="got_cities",
             csv_name_pos="cities",
             csv_name_neg="neg_cities",
             expected_identical_labels=["city", "country", "correct_country"],
         )
     elif subset == "sp_en_trans":
         return _get_paired(
-            dataset_id="geometry_of_truth/sp_en_trans",
+            dataset_id="got_sp_en_trans",
             csv_name_pos="sp_en_trans",
             csv_name_neg="neg_sp_en_trans",
             expected_identical_labels=[],
         )
     elif subset == "larger_than":
         return _get_paired(
-            dataset_id="geometry_of_truth/larger_than",
+            dataset_id="got_larger_than",
             csv_name_pos="larger_than",
             csv_name_neg="smaller_than",
             expected_identical_labels=[],
         )
     elif subset == "cities_cities_conj":
         return _get_unpaired(
-            dataset_id="geometry_of_truth/cities_cities_conj",
+            dataset_id="got_cities_cities_conj",
             csv_name="cities_cities_conj",
         )
     elif subset == "cities_cities_disj":
         return _get_unpaired(
-            dataset_id="geometry_of_truth/cities_cities_disj",
+            dataset_id="got_cities_cities_disj",
             csv_name="cities_cities_disj",
         )
 

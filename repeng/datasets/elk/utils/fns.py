@@ -14,15 +14,11 @@ from repeng.datasets.elk.truthful_qa import get_truthful_qa
 from repeng.datasets.elk.types import BinaryRow, DatasetId
 
 _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
-    "geometry_of_truth/cities": lambda: get_geometry_of_truth("cities"),
-    "geometry_of_truth/sp_en_trans": lambda: get_geometry_of_truth("sp_en_trans"),
-    "geometry_of_truth/larger_than": lambda: get_geometry_of_truth("larger_than"),
-    "geometry_of_truth/cities_cities_conj": lambda: get_geometry_of_truth(
-        "cities_cities_conj"
-    ),
-    "geometry_of_truth/cities_cities_disj": lambda: get_geometry_of_truth(
-        "cities_cities_disj"
-    ),
+    "got_cities": lambda: get_geometry_of_truth("cities"),
+    "got_sp_en_trans": lambda: get_geometry_of_truth("sp_en_trans"),
+    "got_larger_than": lambda: get_geometry_of_truth("larger_than"),
+    "got_cities_cities_conj": lambda: get_geometry_of_truth("cities_cities_conj"),
+    "got_cities_cities_disj": lambda: get_geometry_of_truth("cities_cities_disj"),
     "arc_challenge": lambda: get_arc("challenge", "repe"),
     "arc_easy": lambda: get_arc("easy", "repe"),
     "common_sense_qa": lambda: get_common_sense_qa("repe"),
