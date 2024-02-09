@@ -15,6 +15,10 @@ from repeng.probes.random import train_random_probe
 
 ProbeMethod = Literal["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"]
 
+SUPERVISED_PROBES: list[ProbeMethod] = ["dim", "lda", "lr", "lr-g"]
+UNSUPERVISED_PROBES: list[ProbeMethod] = ["ccs", "lat", "pca", "pca-g"]
+ALL_PROBES: list[ProbeMethod] = SUPERVISED_PROBES + UNSUPERVISED_PROBES
+
 
 def train_probe(
     probe_method: ProbeMethod, arrays: ActivationArrays
