@@ -74,8 +74,8 @@ def train_ccs_probe(
         )
         activations_1.append(group_activations[indices[0]])
         activations_2.append(group_activations[indices[1]])
-    activations_1 = torch.tensor(activations_1).to(dtype=torch.float32)
-    activations_2 = torch.tensor(activations_2).to(dtype=torch.float32)
+    activations_1 = torch.tensor(np.array(activations_1)).to(dtype=torch.float32)
+    activations_2 = torch.tensor(np.array(activations_2)).to(dtype=torch.float32)
 
     _, hidden_dim = activations_1.shape
     probe = CcsProbe(hidden_dim=hidden_dim)
