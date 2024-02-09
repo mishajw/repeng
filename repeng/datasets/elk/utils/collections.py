@@ -15,6 +15,8 @@ DatasetCollectionId = Literal[
     "repe-val",
     "got",
     "got-val",
+    "repe-qa",
+    "repe-qa-val",
 ]
 
 _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
@@ -44,6 +46,16 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
         ],
     ),
     "repe-val": DatasetCollectionFilter("repe-val", ["common_sense_qa"]),
+    "repe-qa": DatasetCollectionFilter(
+        "repe-qa",
+        [
+            "open_book_qa/qa",
+            "race/qa",
+            "arc_challenge/qa",
+            "arc_easy/qa",
+        ],
+    ),
+    "repe-qa-val": DatasetCollectionFilter("repe-qa-val", ["common_sense_qa/qa"]),
     "got": DatasetCollectionFilter(
         "got",
         [
