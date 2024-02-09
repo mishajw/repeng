@@ -7,11 +7,12 @@ import random
 from dataclasses import dataclass
 
 import numpy as np
-from jaxtyping import Float
+from jaxtyping import Float, Int64
 from sklearn.decomposition import PCA
 from typing_extensions import override
 
 from repeng.probes.base import DotProductProbe, PredictResult
+from repeng.probes.normalization import normalize_by_group
 
 
 @dataclass
@@ -29,7 +30,10 @@ class CentredDotProductProbe(DotProductProbe):
 def train_lat_probe(
     *,
     activations: Float[np.ndarray, "n d"],  # noqa: F722
+    answer_types: Int64[np.ndarray, "n d"] | None,  # noqa: F722
 ) -> DotProductProbe:
+    if answer_types is not None:
+        activations = normalize_by_group(activations, answer_types)
     indices = list(range(len(activations)))
     random.shuffle(indices)  # TODO: Double check if shuffling breaks things.
     indices = np.array(indices)[: len(indices) // 2 * 2]

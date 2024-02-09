@@ -37,6 +37,7 @@ def train_probe(
     elif probe_method == "lat":
         return train_lat_probe(
             activations=arrays.activations,
+            answer_types=arrays.answer_types,
         )
     elif probe_method == "dim":
         return train_dim_probe(
@@ -64,6 +65,7 @@ def train_probe(
     elif probe_method == "pca":
         return train_pca_probe(
             activations=arrays.activations,
+            answer_types=arrays.answer_types,
         )
     elif probe_method == "pca-g":
         if arrays.groups is None:
@@ -71,6 +73,7 @@ def train_probe(
         return train_grouped_pca_probe(
             activations=arrays.activations,
             groups=arrays.groups,
+            answer_types=arrays.answer_types,
         )
     elif probe_method == "rand":
         return train_random_probe(
