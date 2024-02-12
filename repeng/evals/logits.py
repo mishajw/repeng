@@ -24,7 +24,7 @@ def eval_logits_by_question(
         # we just check that one of the correct answers was chosen.
         correct.append(group_labels[max_idx])  # type: ignore
     accuracy = sum(correct) / len(correct)
-    return QuestionsEvalResult(accuracy=accuracy, is_flipped=False)
+    return QuestionsEvalResult(accuracy=accuracy, is_flipped=False, n=len(correct))
 
 
 def eval_logits_by_row(
@@ -73,4 +73,5 @@ def eval_logits_by_row(
         tprs=tpr.tolist(),
         logits=logits.tolist(),
         is_flipped=False,
+        n=len(labels),
     )

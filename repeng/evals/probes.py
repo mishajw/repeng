@@ -51,6 +51,7 @@ def eval_probe_by_question(
         return QuestionsEvalResult(
             accuracy=eval_result_flipped.accuracy,
             is_flipped=True,
+            n=eval_result.n,
         )
     else:
         return eval_result
