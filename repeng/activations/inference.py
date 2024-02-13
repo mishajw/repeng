@@ -56,10 +56,10 @@ def get_model_activations(
         if last_n_tokens is not None:
             activations = activations[-last_n_tokens:]
         activations = activations.detach()
-        if activations.dtype == torch.bfloat16:
-            # bfloat16 is not supported by numpy. Cast to float32 instead of float16
-            # so we don't lose range.
-            activations = activations.to(dtype=torch.float32)
+        # bfloat16 is not supported by numpy. We lose some precision by converting to
+        # float16, but it significantly saves space an empirically makes little
+        # difference.
+        activations = activations.to(dtype=torch.float16)
         return activations.cpu().numpy()
 
     return ActivationRow(
