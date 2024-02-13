@@ -10,13 +10,9 @@ from repeng.datasets.elk.utils.fns import get_datasets
 DatasetCollectionId = Literal[
     "all",
     "dlk",
-    "dlk-val",
     "repe",
-    "repe-val",
     "got",
-    "got-val",
     "repe-qa",
-    "repe-qa-val",
 ]
 
 _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
@@ -33,9 +29,9 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "rte",
             "copa",
             "piqa",
+            "boolq",
         ],
     ),
-    "dlk-val": DatasetCollectionFilter("dlk-val", ["boolq"]),
     "repe": DatasetCollectionFilter(
         "repe",
         [
@@ -43,9 +39,9 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "race",
             "arc_challenge",
             "arc_easy",
+            "common_sense_qa",
         ],
     ),
-    "repe-val": DatasetCollectionFilter("repe-val", ["common_sense_qa"]),
     "repe-qa": DatasetCollectionFilter(
         "repe-qa",
         [
@@ -53,9 +49,9 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "race/qa",
             "arc_challenge/qa",
             "arc_easy/qa",
+            "common_sense_qa/qa",
         ],
     ),
-    "repe-qa-val": DatasetCollectionFilter("repe-qa-val", ["common_sense_qa/qa"]),
     "got": DatasetCollectionFilter(
         "got",
         [
@@ -63,9 +59,9 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "got_sp_en_trans",
             "got_cities_cities_conj",
             "got_cities_cities_disj",
+            "got_larger_than",
         ],
     ),
-    "got-val": DatasetCollectionFilter("got-val", ["got_larger_than"]),
 }
 
 
