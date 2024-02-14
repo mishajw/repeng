@@ -47,8 +47,8 @@ def get_dlk_dataset(dataset_id: DlkDatasetId):
     dataset_spec = _DATASET_SPECS[dataset_id]
     dataset: Any = load_dataset(dataset_spec.name, dataset_spec.subset)
     return {
-        **_get_dlk_dataset(dataset_id, dataset, split="train", limit=600),
-        **_get_dlk_dataset(dataset_id, dataset, split="validation", limit=400),
+        **_get_dlk_dataset(dataset_id, dataset, split="train", limit=1000),
+        **_get_dlk_dataset(dataset_id, dataset, split="validation", limit=1000),
     }
 
 
