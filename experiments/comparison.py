@@ -1,5 +1,4 @@
 # %%
-import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence, cast
@@ -7,7 +6,10 @@ from typing import Sequence, cast
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objs as go
+import scipy.stats
 from dotenv import load_dotenv
+from jaxtyping import Bool, Float, Int32
 from mppr import MContext
 from pydantic import BaseModel
 
@@ -16,26 +18,15 @@ from repeng.datasets.activations.types import ActivationResultRow
 from repeng.datasets.elk.types import DatasetId, Split
 from repeng.datasets.elk.utils.collections import (
     DatasetCollectionId,
-    DatasetCollectionIdFilter,
     resolve_dataset_ids,
 )
-from repeng.datasets.elk.utils.filters import (
-    DatasetCollectionFilter,
-    DatasetFilter,
-    DatasetIdFilter,
-)
+from repeng.datasets.elk.utils.filters import DatasetFilter, DatasetIdFilter
 from repeng.evals.logits import eval_logits_by_question, eval_logits_by_row
 from repeng.evals.probes import eval_probe_by_question, eval_probe_by_row
 from repeng.models.llms import LlmId
 from repeng.models.points import get_points
 from repeng.probes.base import BaseProbe
-from repeng.probes.collections import (
-    ALL_PROBES,
-    SUPERVISED_PROBES,
-    UNSUPERVISED_PROBES,
-    ProbeMethod,
-    train_probe,
-)
+from repeng.probes.collections import ALL_PROBES, ProbeMethod, train_probe
 
 assert load_dotenv("../.env")
 
@@ -49,8 +40,8 @@ See experiments/comparison_2024-01-30.sh for the script that produced the datase
 path = Path("../output/comparison")
 mcontext = MContext(path)
 activation_results: list[ActivationResultRow] = mcontext.download_cached(
-    "activations_results_fp16",
-    path="s3://repeng/datasets/activations/datasets_2024-02-09_v1.pickle",
+    "activations_results",
+    path="s3://repeng/datasets/activations/datasets_2024-02-13_v1.pickle",
     to="pickle",
 ).get()
 print(set(row.llm_id for row in activation_results))
@@ -95,8 +86,9 @@ class PipelineResultRow(BaseModel, extra="forbid"):
     point_name: str
     token_idx: int
     accuracy: float
+    accuracy_n: int
     accuracy_hparams: float
-    eval_n: int
+    accuracy_hparams_n: float
 
 
 token_idxs: list[int] = [-1]
@@ -181,8 +173,9 @@ def _eval_probe(_: str, spec: EvalSpec) -> PipelineResultRow:
         point_name=spec.train_spec.point_name,
         token_idx=spec.train_spec.token_idx,
         accuracy=result_validation.accuracy,
+        accuracy_n=result_validation.n,
         accuracy_hparams=result_hparams.accuracy,
-        eval_n=result_validation.n,
+        accuracy_hparams_n=result_hparams.n,
     )
 
 
@@ -303,6 +296,15 @@ DIMS = {
 DLK_DATASETS = resolve_dataset_ids("dlk")
 REPE_DATASETS = resolve_dataset_ids("repe")
 GOT_DATASETS = resolve_dataset_ids("got")
+BASE_COLORS = px.colors.sequential.Plotly3
+COLORS = [
+    [0.0, "#222"],
+    [1e-5, BASE_COLORS[0]],
+    *[
+        [(i + 1) / (len(BASE_COLORS) - 1), color]
+        for i, color in enumerate(BASE_COLORS[1:])
+    ],
+]
 
 
 def to_dataframe(
@@ -315,7 +317,6 @@ def to_dataframe(
     )
     df["is_supervised"] = df["probe_method"].isin(["dim", "lda", "lr", "lr-g"])
     df["layer"] = df["point_name"].apply(lambda p: int(p.lstrip("h")))
-    df["ci"] = np.sqrt(df["accuracy"] * (1 - df["accuracy"]) / df["eval_n"])
     df = df.drop(columns=["point_name", "token_idx"])
     return df
 
@@ -333,17 +334,403 @@ def select_best(
 
 
 # %%
+datasets = [
+    DatasetIdFilter(dataset)
+    for collection in ["dlk", "repe", "got"]
+    for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+]
+results_truthful_qa = run_pipeline(
+    llm_ids=["Llama-2-13b-chat-hf"],
+    train_datasets=datasets,
+    eval_datasets=datasets,  # + [DatasetIdFilter("truthful_qa")],
+    probe_methods=ALL_PROBES,
+    point_skip=4,
+)
+
+# %%
+df = to_dataframe(results_truthful_qa)
+best_self_trained = (
+    df[df["train"] == df["eval"]].groupby("eval")["accuracy_hparams"].idxmax()
+)
+df = df.join(
+    df.loc[best_self_trained][["eval", "accuracy", "accuracy_n"]]
+    .rename(
+        columns={
+            "accuracy": "threshold",
+            "accuracy_n": "threshold_n",
+        }
+    )
+    .set_index("eval"),
+    on="eval",
+)
+df  # type: ignore
+
+
+# %%
+def generalizes(
+    accuracy: Float[np.ndarray, "n"],  # noqa: F821
+    accuracy_n: Int32[np.ndarray, "n"],  # noqa: F821
+    threshold: Float[np.ndarray, "n"],  # noqa: F821
+    threshold_n: Int32[np.ndarray, "n"],  # noqa: F821
+) -> Bool[np.ndarray, "n"]:  # noqa: F821
+    # See variance in https://en.wikipedia.org/wiki/Binomial_distribution
+    accuracy_std = (accuracy * (1 - accuracy)) ** 0.5
+    threshold_std = (threshold * (1 - threshold)) ** 0.5
+    accuracy_stderr = accuracy_std / (accuracy_n**0.5)
+    threshold_stderr = threshold_std / (threshold_n**0.5)
+    diff_mean = accuracy - threshold
+    diff_stderr = ((accuracy_stderr**2) + (threshold_stderr**2)) ** 0.5
+    z_value = scipy.stats.norm.ppf(0.975)
+    diff_ci_upper = diff_mean + z_value * diff_stderr
+    return diff_ci_upper >= 0
+
+
+df["generalizes"] = generalizes(
+    df["accuracy"].to_numpy(),
+    df["accuracy_n"].to_numpy(),
+    df["threshold"].to_numpy(),
+    df["threshold_n"].to_numpy(),
+)
+df["generalizes_hparams"] = generalizes(
+    df["accuracy_hparams"].to_numpy(),
+    df["accuracy_hparams_n"].to_numpy(),
+    df["threshold"].to_numpy(),
+    df["threshold_n"].to_numpy(),
+)
+
+
+# %%
+ranked = (
+    df.query("train != eval")
+    .groupby(["train", "probe_method", "layer"])[["generalizes", "generalizes_hparams"]]
+    .mean()
+    .sort_values("generalizes_hparams", ascending=False)  # type: ignore
+    .reset_index()
+)
+px.ecdf(ranked, x="generalizes", range_x=[0, 1]).show()
+ranked.head(20)
+
+# %%
+train_order = (
+    df.groupby(["train"])["generalizes"]
+    .mean()
+    .sort_values(ascending=False)  # type: ignore
+    .index.to_list()
+)
+probe_order = (
+    df.groupby(["probe_method"])["generalizes"]
+    .mean()
+    .sort_values(ascending=False)  # type: ignore
+    .index.to_list()
+)
+
+# %%
+df_probes = df.copy().query("train != eval")
+df_probes = (
+    df_probes.groupby(["probe_method", "eval"])["generalizes"].mean().reset_index()
+)
+df_probes = pd.concat(
+    [
+        df_probes,
+        df_probes.groupby("probe_method")["generalizes"]
+        .mean()
+        .reset_index()
+        .assign(eval="all"),
+    ]
+)
+fig = px.imshow(
+    df_probes.pivot(index="probe_method", columns="eval", values="generalizes")
+    .reindex(probe_order, axis=0)
+    .reindex([*train_order, "all"], axis=1),
+    text_auto=".0%",  # type: ignore
+    color_continuous_scale=COLORS,
+    width=800,
+)
+fig.update_layout(coloraxis_showscale=False)
+fig.write_image(path / "q1_probes.png", scale=3)
+fig.show()
+
+
+# %%
+def plot_train(dataset_ids: list[DatasetId]) -> go.Figure:
+    df_train = df.copy()
+    df_train = df_train[df_train["train"].isin(dataset_ids)]  # type: ignore
+    df_train = (
+        df_train.groupby(["train", "eval"])["generalizes"]  # type: ignore
+        .mean()
+        .reset_index()
+    )
+    df_train = pd.concat(
+        [
+            df_train,
+            df_train.groupby("train")["generalizes"]
+            .mean()
+            .reset_index()
+            .assign(eval="all"),
+        ]
+    )
+    index = [d for d in train_order if d in dataset_ids]
+    fig = px.imshow(
+        df_train.pivot(index="train", columns="eval", values="generalizes")
+        .reindex(index, axis=0)
+        .reindex([*train_order, "all"], axis=1),
+        text_auto=".0%",  # type: ignore
+        color_continuous_scale=COLORS,
+        width=800,
+    )
+    fig.update_layout(coloraxis_showscale=False)
+    return fig
+
+
+fig = plot_train(DLK_DATASETS + REPE_DATASETS + GOT_DATASETS)
+fig.update_layout(height=800)
+fig.write_image(path / "q2_datasets.png", scale=3)
+fig.show()
+
+fig = plot_train(DLK_DATASETS)
+fig.update_layout(title="DLK datasets")
+fig.write_image(path / "q2a_datasets_dlk.png", scale=3)
+fig.show()
+
+fig = plot_train(REPE_DATASETS)
+fig.update_layout(title="RepE datasets", height=350)
+fig.write_image(path / "q2b_datasets_repe.png", scale=3)
+fig.show()
+
+fig = plot_train(GOT_DATASETS)
+fig.update_layout(title="GoT datasets", height=350)
+fig.write_image(path / "q2c_datasets_got.png", scale=3)
+fig.show()
+
+# %%
+best_train = "dbpedia_14"
+best_probe_method = "lr-g"
+best_layer = 20
+best_train = "rte"
+best_probe_method = "ccs"
+best_layer = 16
+
+df_best_probes = (
+    df.copy()
+    .query("train != eval")
+    .query(f"train == '{best_train}'")
+    .query(f"layer == {best_layer}")
+    .groupby(["probe_method", "eval"])["generalizes"]
+    .mean()
+    .reset_index()
+)
+fig = px.imshow(
+    df_best_probes.pivot(index="probe_method", columns="eval", values="generalizes")
+    .reindex(probe_order, axis=0)
+    .reindex([d for d in train_order if d != best_train], axis=1),
+    color_continuous_scale=COLORS,
+    width=800,
+)
+fig.update_layout(height=500, coloraxis_showscale=False)
+fig.write_image(path / "q3a_best_probes.png", scale=3)
+fig.show()
+
+df_best_train = (
+    df.copy()
+    .query(f"probe_method == '{best_probe_method}'")
+    .query(f"layer == {best_layer}")
+    .groupby(["train", "eval"])["generalizes"]
+    .mean()
+    .reset_index()
+)
+fig = px.imshow(
+    df_best_train.pivot(index="train", columns="eval", values="generalizes")
+    .reindex(train_order, axis=0)
+    .reindex([d for d in train_order if d != best_train], axis=1)
+    .dropna(),
+    color_continuous_scale=COLORS,
+    width=800,
+)
+fig.update_layout(height=800, coloraxis_showscale=False)
+fig.write_image(path / "q3b_best_datasets.png", scale=3)
+fig.show()
+
+df_best_layer = (
+    df.copy()
+    .query(f"train == '{best_train}'")
+    .query(f"probe_method == '{best_probe_method}'")
+    .groupby(["layer", "eval"])["generalizes"]
+    .mean()
+    .reset_index()
+)
+fig = px.imshow(
+    df_best_layer.pivot(index="layer", columns="eval", values="generalizes").reindex(
+        [d for d in train_order if d != best_train], axis=1
+    ),
+    color_continuous_scale=COLORS,
+    width=800,
+)
+fig.update_layout(coloraxis_showscale=False)
+fig.write_image(path / "q3c_best_layers.png", scale=3)
+fig.show()
+
+
+# %%
+results_truthful_qa = run_pipeline(
+    llm_ids=["Llama-2-13b-chat-hf"],
+    train_datasets=datasets,
+    eval_datasets=[DatasetIdFilter("truthful_qa")],
+    probe_methods=ALL_PROBES,
+    point_skip=4,
+)
+truthful_qa = (
+    to_dataframe(results_truthful_qa)
+    .set_index(["train", "probe_method", "layer"])["accuracy"]
+    .rename("truthful_qa")  # type: ignore
+)
+df_truthful_qa = (
+    df.query("train != eval")
+    .groupby(["train", "probe_method", "layer"])["generalizes"]
+    .mean()
+    .reset_index()
+    .join(
+        truthful_qa,
+        on=["train", "probe_method", "layer"],
+    )
+)
+fig = px.box(df_truthful_qa, x="generalizes", y="truthful_qa")
+fig.layout.xaxis.tickformat = ",.0%"  # type: ignore
+fig.layout.yaxis.tickformat = ",.0%"  # type: ignore
+# https://arxiv.org/abs/2310.01405, table 1
+fig.add_hline(y=0.359, line_dash="dot", line_color="green")
+fig.add_hline(y=0.503, line_dash="dot", line_color="gray")
+fig.update_layout(width=800)
+fig.write_image(path / "q4_truthful_qa.png", scale=3)
+fig.show()
+df_truthful_qa.sort_values("generalizes", ascending=False).head(20)
+
+# %%
+(truthful_qa_eval,) = run_logprobs_pipeline(
+    llm_ids=["Llama-2-13b-chat-hf"],
+    eval_datasets=[DatasetIdFilter("truthful_qa")],
+)
+truthful_qa_eval.model_dump()
+
+# %%
 """
-Q0: Simple test. Do we get 80% accuracy on arc_easy?
+Q5: Does adding more datasets improve generalization?
 """
-results = run_pipeline(
+
+
+# def sample(
+#     dataset_collection_id: DatasetCollectionId, *, seed: int, k: int | None
+# ) -> list[DatasetId]:
+#     dataset_ids = resolve_dataset_ids(dataset_collection_id)
+#     if k is None:
+#         return dataset_ids
+#     random.seed(seed)
+#     return random.sample(dataset_ids, k=k)
+
+
+# datasets_multi = [
+#     DatasetCollectionFilter(
+#         f"{dataset}-{size_name}-{i}", sample(dataset, seed=i, k=size)
+#     )
+#     for dataset, sizes in [
+#         ("dlk", [3, 5, None]),
+#         ("repe", [2, 3, None]),
+#         ("got", [2, 3, None]),
+#     ]
+#     for size, n_iters, size_name in zip(
+#         sizes,
+#         [5, 5, 1],
+#         ["small", "medium", "large"],
+#     )
+#     for i in range(n_iters)
+# ]
+# results_multi = run_pipeline(
+#     llm_ids=["Llama-2-13b-chat-hf"],
+#     train_datasets=datasets_multi,
+#     eval_datasets=[
+#         DatasetCollectionIdFilter("dlk-val"),
+#         DatasetCollectionIdFilter("repe-qa-val"),
+#         DatasetCollectionIdFilter("got-val"),
+#         DatasetIdFilter("truthful_qa"),
+#     ],
+#     probe_methods=["lr"],
+#     point_skip=4,
+# )
+# results_single = run_pipeline(
+#     llm_ids=["Llama-2-13b-chat-hf"],
+#     train_datasets=[
+#         DatasetIdFilter(dataset)
+#         for collection in ["dlk", "repe", "got"]
+#         for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
+#     ],
+#     eval_datasets=[
+#         DatasetCollectionIdFilter("dlk-val"),
+#         DatasetCollectionIdFilter("repe-qa-val"),
+#         DatasetCollectionIdFilter("got-val"),
+#         DatasetIdFilter("truthful_qa"),
+#     ],
+#     probe_methods=["lr"],
+#     point_skip=4,
+# )
+
+# df_single = to_dataframe(results_single)
+# df_single["train"] = df_single["train"].apply(
+#     lambda d: "dlk" if d in DLK_DATASETS else "repe" if d in REPE_DATASETS else "got"
+# )
+# best_train_dataset_idxs = df_single.groupby(list(DIMS - {"layer"}))[
+#     "accuracy_hparams"
+# ].idxmax()
+# df_single = df_single.loc[best_train_dataset_idxs]
+# df_single["train_subset"] = "single-best"
+# df_single["single_best"] = True
+
+# df_multi = to_dataframe(results_multi)
+# df_multi["train_subset"] = df_multi["train"].apply(lambda d: d.split("-")[1])
+# df_multi["train"] = df_multi["train"].apply(lambda d: d.split("-")[0])
+# df_multi = (
+#     df_multi.groupby(list(DIMS | {"train_subset"}))["accuracy"]
+#     .agg(accuracy="mean", accuracy_min="min", accuracy_max="max")  # type: ignore
+#     .reset_index()
+# )
+# df_multi["accuracy_min"] = df_multi["accuracy"] - df_multi["accuracy_min"]
+# df_multi["accuracy_max"] = df_multi["accuracy_max"] - df_multi["accuracy"]
+# df_multi["single_best"] = False
+
+# df = pd.concat([df_multi, df_single])
+# df = select_best(df, "layer", "accuracy_hparams", extra_dims=["train_subset"])
+# fig = px.bar(
+#     df,
+#     # title="Q4: Does adding more datasets improve generalization?",
+#     x="train_subset",
+#     y="accuracy",
+#     error_y="accuracy_max",
+#     error_y_minus="accuracy_min",
+#     color="single_best",
+#     facet_col="eval",
+#     facet_row="train",
+#     category_orders={
+#         "train": ["dlk", "repe", "got"],
+#         "train_subset": ["small", "medium", "large", "single-best"],
+#         "eval": ["dlk", "repe", "got", "truthful_qa"],
+#     },
+# )
+# fig.update_layout(height=600, width=800, showlegend=False)
+# fig.write_image(path / "q5_larger_datasets.png")
+# fig.show()
+
+# %%
+"""
+Validating results 1: Simple test. Do we get 80% accuracy on arc_easy?
+"""
+results_truthful_qa = run_pipeline(
     llm_ids=["Llama-2-13b-chat-hf"],
     train_datasets=[DatasetIdFilter("arc_easy")],
     eval_datasets=[DatasetIdFilter("arc_easy")],
     probe_methods=["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"],
     point_skip=6,
 )
-df = to_dataframe(results).sort_values(["is_supervised", "probe_method", "layer"])
+df = to_dataframe(results_truthful_qa).sort_values(
+    ["is_supervised", "probe_method", "layer"]
+)
 px.line(
     df,
     x="layer",
@@ -354,328 +741,9 @@ px.line(
 
 # %%
 """
-Q1: Does using groups improve generalization?
+Validating results 2: Do we get the same accuracy as the GoT paper?
 """
-results = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=[
-        DatasetIdFilter(dataset)
-        for collection in ["dlk", "repe", "got"]
-        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-    ],
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=["lr", "lr-g", "pca", "pca-g"],
-    point_skip=4,
-)
-
-df = to_dataframe(results)
-best_datasets_and_points = df.groupby(list(DIMS - {"train", "layer"}))[
-    "accuracy_hparams"
-].idxmax()
-df = df.loc[best_datasets_and_points]
-df["probe"] = df["probe_method"].apply(lambda p: p.split("-")[0])
-df["is_grouped"] = df["probe_method"].apply(lambda p: p.endswith("-g"))
-
-fig = px.bar(
-    df,
-    # title="Q1: Does using groups improve generalization?",
-    x="is_grouped",
-    y="accuracy",
-    color="is_grouped",
-    text="accuracy",
-    facet_col="eval",
-    facet_row="probe",
-    category_orders={
-        "eval": ["dlk", "repe", "got", "truthful_qa"],
-    },
-)
-fig.update_layout(height=500, width=800, showlegend=False)
-fig.update_traces(texttemplate="%{text:.1%}")
-fig.write_image(path / "q1_groups.png", scale=3)
-fig.show()
-
-
-# %%
-"""
-Q2: What supervised and unsupervised probe generalises best?
-"""
-results = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=[
-        DatasetIdFilter(dataset)
-        for collection in ["dlk", "repe", "got"]
-        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-    ],
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=ALL_PROBES,
-    point_skip=4,
-)
-
-df = to_dataframe(results)
-best_datasets_and_points = df.groupby(list(DIMS - {"train", "layer"}))[
-    "accuracy_hparams"
-].idxmax()
-df = df.loc[best_datasets_and_points]
-
-fig = px.bar(
-    df[df["probe_method"].isin(SUPERVISED_PROBES)],
-    title="Supervised probes",
-    x="probe_method",
-    y="accuracy",
-    text="accuracy",
-    color="probe_method",
-    facet_col="eval",
-    category_orders={"eval": ["dlk", "repe", "got", "truthful_qa"]},
-)
-fig.update_layout(height=300, width=800, showlegend=False)
-fig.update_traces(texttemplate="%{text:.1%}")
-fig.write_image(path / "q2a_supervised_probes.png", scale=3)
-fig.show()
-
-fig = px.bar(
-    df[df["probe_method"].isin(UNSUPERVISED_PROBES)],
-    title="Unsupervised probes",
-    x="probe_method",
-    y="accuracy",
-    text="accuracy",
-    color="probe_method",
-    facet_col="eval",
-    category_orders={"eval": ["dlk", "repe", "got", "truthful_qa"]},
-)
-fig.update_layout(height=300, width=800, showlegend=False)
-fig.update_traces(texttemplate="%{text:.1%}")
-fig.write_image(path / "q2b_unsupervised_probes.png", scale=3)
-fig.show()
-
-
-# %%
-"""
-Q3: Do simple datasets outperform complex datasets?
-"""
-results = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=[
-        DatasetIdFilter(dataset)
-        for collection in ["dlk", "repe", "got"]
-        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-    ],
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=["dim", "pca-g"],
-    point_skip=4,
-)
-
-simple_supervised_to_name: dict[tuple[bool, bool], str] = {
-    (False, False): "diverse, unsup",
-    (False, True): "diverse, sup",
-    (True, False): "simple, unsup",
-    (True, True): "simple, sup",
-}
-df = to_dataframe(results)
-df = select_best(df, "layer", "accuracy_hparams")
-df["is_simple"] = df["train"].apply(lambda d: d in GOT_DATASETS)
-best_train_datasets = df.groupby(list(DIMS - {"train", "layer"} | {"is_simple"}))[
-    "accuracy_hparams"
-].idxmax()
-df = df.loc[best_train_datasets]
-df["probe"] = df.apply(
-    lambda row: simple_supervised_to_name[(row["is_simple"], row["is_supervised"])],
-    axis=1,
-)
-
-fig = px.bar(
-    df,
-    # title="Q3: Do simple datasets and supervised methods improve generalisation?",
-    x="probe",
-    y="accuracy",
-    color="is_simple",
-    facet_col="eval",
-    text="accuracy",
-    category_orders={
-        "train_group": ["dlk-repe", "got"],
-        "eval": ["dlk", "repe", "got", "truthful_qa"],
-        "probe": list(simple_supervised_to_name.values()),
-    },
-)
-fig.update_layout(height=350, width=800, showlegend=False)
-fig.update_traces(texttemplate="%{text:.1%}")
-fig.update_xaxes(tickangle=90)
-fig.write_image(path / "q3_simple_vs_complex.png", scale=3)
-fig.show()
-
-
-# %%
-"""
-Q4: Which training dataset improves generalisation?
-"""
-results = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=[
-        DatasetIdFilter(dataset)
-        for collection in ["dlk", "repe", "got"]
-        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-    ],
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=ALL_PROBES,
-    point_skip=4,
-)
-
-df = to_dataframe(results)
-best_datasets_and_points = df.groupby(list(DIMS - {"layer", "probe_method"}))[
-    "accuracy_hparams"
-].idxmax()
-df = df.loc[best_datasets_and_points]
-df["train_group"] = df["train"].apply(
-    lambda d: "dlk" if d in DLK_DATASETS else "repe" if d in REPE_DATASETS else "got"
-)
-
-fig = px.bar(
-    df,
-    title="Supervised probes",
-    x="train",
-    y="accuracy",
-    text="accuracy",
-    color="train_group",
-    facet_row="eval",
-    category_orders={"eval": ["dlk", "repe", "got", "truthful_qa"]},
-)
-fig.update_layout(height=700, width=800, showlegend=False)
-fig.update_traces(texttemplate="%{text:.1%}")
-fig.write_image(path / "q4_datasets.png", scale=3)
-fig.show()
-
-
-# %%
-"""
-Q5: Does adding more datasets improve generalization?
-"""
-
-
-def sample(
-    dataset_collection_id: DatasetCollectionId, *, seed: int, k: int | None
-) -> list[DatasetId]:
-    dataset_ids = resolve_dataset_ids(dataset_collection_id)
-    if k is None:
-        return dataset_ids
-    random.seed(seed)
-    return random.sample(dataset_ids, k=k)
-
-
-datasets_multi = [
-    DatasetCollectionFilter(
-        f"{dataset}-{size_name}-{i}", sample(dataset, seed=i, k=size)
-    )
-    for dataset, sizes in [
-        ("dlk", [3, 5, None]),
-        ("repe", [2, 3, None]),
-        ("got", [2, 3, None]),
-    ]
-    for size, n_iters, size_name in zip(
-        sizes,
-        [5, 5, 1],
-        ["small", "medium", "large"],
-    )
-    for i in range(n_iters)
-]
-results_multi = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=datasets_multi,
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=["lr"],
-    point_skip=4,
-)
-results_single = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=[
-        DatasetIdFilter(dataset)
-        for collection in ["dlk", "repe", "got"]
-        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-    ],
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=["lr"],
-    point_skip=4,
-)
-
-df_single = to_dataframe(results_single)
-df_single["train"] = df_single["train"].apply(
-    lambda d: "dlk" if d in DLK_DATASETS else "repe" if d in REPE_DATASETS else "got"
-)
-best_train_dataset_idxs = df_single.groupby(list(DIMS - {"layer"}))[
-    "accuracy_hparams"
-].idxmax()
-df_single = df_single.loc[best_train_dataset_idxs]
-df_single["train_subset"] = "single-best"
-df_single["single_best"] = True
-
-df_multi = to_dataframe(results_multi)
-df_multi["train_subset"] = df_multi["train"].apply(lambda d: d.split("-")[1])
-df_multi["train"] = df_multi["train"].apply(lambda d: d.split("-")[0])
-df_multi = (
-    df_multi.groupby(list(DIMS | {"train_subset"}))["accuracy"]
-    .agg(accuracy="mean", accuracy_min="min", accuracy_max="max")  # type: ignore
-    .reset_index()
-)
-df_multi["accuracy_min"] = df_multi["accuracy"] - df_multi["accuracy_min"]
-df_multi["accuracy_max"] = df_multi["accuracy_max"] - df_multi["accuracy"]
-df_multi["single_best"] = False
-
-df = pd.concat([df_multi, df_single])
-df = select_best(df, "layer", "accuracy_hparams", extra_dims=["train_subset"])
-fig = px.bar(
-    df,
-    # title="Q4: Does adding more datasets improve generalization?",
-    x="train_subset",
-    y="accuracy",
-    error_y="accuracy_max",
-    error_y_minus="accuracy_min",
-    color="single_best",
-    facet_col="eval",
-    facet_row="train",
-    category_orders={
-        "train": ["dlk", "repe", "got"],
-        "train_subset": ["small", "medium", "large", "single-best"],
-        "eval": ["dlk", "repe", "got", "truthful_qa"],
-    },
-)
-fig.update_layout(height=600, width=800, showlegend=False)
-fig.write_image(path / "q5_larger_datasets.png")
-fig.show()
-
-
-# %%
-"""
-Validating results 1: Do we get the same accuracy as the GoT paper?
-"""
-results = run_pipeline(
+results_truthful_qa = run_pipeline(
     llm_ids=["Llama-2-13b-chat-hf"],
     train_datasets=[DatasetIdFilter("got_cities")],
     eval_datasets=[DatasetIdFilter("got_cities")],
@@ -683,7 +751,7 @@ results = run_pipeline(
     point_skip=4,
 )
 
-df = to_dataframe(results)
+df = to_dataframe(results_truthful_qa)
 px.line(
     df.sort_values(["layer", "is_supervised"]),
     x="layer",
@@ -696,7 +764,7 @@ px.line(
 
 # %%
 """
-Validating results 2: Do we get the same accuracy as the RepE paper?
+Validating results 3: Do we get the same accuracy as the RepE paper?
 """
 train_datasets: list[DatasetId] = [
     "race",
@@ -711,7 +779,7 @@ eval_datasets: list[DatasetId] = [
     "arc_challenge/qa",
 ]
 eval_datasets = train_datasets
-results = run_pipeline(
+results_truthful_qa = run_pipeline(
     llm_ids=["Llama-2-13b-chat-hf"],
     train_datasets=list(map(DatasetIdFilter, train_datasets)),
     eval_datasets=list(map(DatasetIdFilter, eval_datasets)),
@@ -719,7 +787,7 @@ results = run_pipeline(
     point_skip=None,
 )
 
-df = to_dataframe(results)
+df = to_dataframe(results_truthful_qa)
 df = df[df["train"] == df["eval"]]  # .str.rstrip("/qa")]
 fig = px.line(
     df.sort_values("layer"),  # type: ignore
@@ -739,231 +807,3 @@ fig.add_hline(y=0.547, line_dash="dot", line_color="blue")
 fig.add_hline(y=0.803, line_dash="dot", line_color="green")
 fig.add_hline(y=0.532, line_dash="dot", line_color="orange")
 fig.show()
-
-
-# %%
-results = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=[
-        DatasetIdFilter(dataset)
-        for collection in ["dlk", "repe", "got"]
-        for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-    ],
-    eval_datasets=[
-        DatasetCollectionIdFilter("dlk-val"),
-        DatasetCollectionIdFilter("repe-qa-val"),
-        DatasetCollectionIdFilter("got-val"),
-        DatasetIdFilter("truthful_qa"),
-    ],
-    probe_methods=ALL_PROBES,
-    point_skip=4,
-)
-
-# %%
-df = to_dataframe(results)
-df = df[df["layer"] == 16]
-dim_slice = "probe_method"
-dim_agg = {"layer", "train"}
-dim_slice = "train"
-dim_agg = {"layer", "probe_method"}
-# dim_slice = "layer"
-# dim_agg = {"train", "probe_method"}
-# mean_accuracies = (
-#     df.groupby(list(DIMS - {dim_slice}))["accuracy"].mean().rename("accuracy_mean")
-# )
-# df = df.join(mean_accuracies, on=list(DIMS - {dim_slice}))
-# df["accuracy_rel"] = df["accuracy"] / df["accuracy_mean"] - 1
-df = df.groupby(list(DIMS - dim_agg))["accuracy"].mean().reset_index()
-px.bar(
-    df,
-    x=dim_slice,
-    y="accuracy",
-    color=dim_slice,
-    facet_row="eval",
-    category_orders={"eval": ["dlk", "repe", "got", "truthful_qa"]},
-    height=1000,
-)
-
-# %%
-df = to_dataframe(results)
-# df = (
-#     df.groupby(list(DIMS - {"eval"} | {"is_supervised"}))[
-#         ["accuracy", "accuracy_hparams"]
-#     ]
-#     .mean()
-#     .reset_index()
-# )
-df = df[df["eval"] == "repe"]
-best_layers = df.groupby(list(DIMS - {"eval", "layer"} | {"is_supervised"}))[
-    "accuracy_hparams"
-].idxmax()
-df = df.loc[best_layers]
-
-df = df.drop(columns=["llm_id", "layer", "is_supervised", "accuracy_hparams"])
-df = df.sort_values(["train", "probe_method"])
-df["accuracy"] *= 100
-df = df.pivot(index="probe_method", columns="train", values="accuracy")
-fig = px.imshow(df, text_auto=".1f")
-# fig.update_traces(texttemplate="%{text:.1%}")
-fig.show()
-
-# fig = px.bar(
-#     df,
-#     x="train",
-#     y="accuracy",
-#     text="accuracy",
-#     # color="probe_method"
-#     facet_row="probe_method",
-#     category_orders={"eval": ["dlk", "repe", "got", "truthful_qa"]},
-# )
-# fig.update_layout(height=1000, width=800, showlegend=False)
-# fig.update_traces(texttemplate="%{text:.1%}")
-# # fig.write_image(path / "q4_datasets.png", scale=3)
-# fig.show()
-
-# # %%
-# df = to_dataframe(results)
-# df.groupby("eval")["accuracy"].std()
-
-# %%
-datasets = [
-    DatasetIdFilter(dataset)
-    for collection in ["dlk", "repe", "got"]
-    for dataset in resolve_dataset_ids(cast(DatasetCollectionId, collection))
-]
-results = run_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    train_datasets=datasets,
-    eval_datasets=datasets + [DatasetIdFilter("truthful_qa")],
-    probe_methods=ALL_PROBES,
-    point_skip=4,
-)
-
-# %%
-df = to_dataframe(results)
-best_self_trained = (
-    df[df["train"] == df["eval"]].groupby("eval")["accuracy_hparams"].idxmax()
-)
-df = df.join(
-    df.loc[best_self_trained][["eval", "accuracy", "ci"]]
-    .rename(columns={"accuracy": "threshold", "ci": "threshold_ci"})
-    .set_index("eval"),
-    on="eval",
-)
-df["generalizes"] = df["accuracy"] + df["ci"] >= df["threshold"] - df["threshold_ci"]
-
-colors = px.colors.sequential.Plotly3
-colors = [
-    [0.0, "#222"],
-    [1e-5, colors[0]],
-    *[[(i + 1) / (len(colors) - 1), color] for i, color in enumerate(colors[1:])],
-]
-
-df_train = df.copy()
-# df_train = df_train.query("probe_method == 'dim'").query("layer == 20")
-df_train = df_train.groupby(["train", "eval"])["generalizes"].mean().reset_index()
-df_train = pd.concat(
-    [
-        df_train,
-        df_train.groupby("train")["generalizes"]
-        .mean()
-        .reset_index()
-        .assign(eval="all"),
-    ]
-)
-train_order = (
-    df_train[df_train["eval"] == "all"]
-    .sort_values("generalizes", ascending=False)["train"]
-    .to_list()
-)
-df_train = (
-    df_train.pivot(index="train", columns="eval", values="generalizes")
-    .reindex(train_order, axis=0)
-    .reindex([*train_order, "all"], axis=1)
-)
-# df_train = df_train[df_train.index.isin(resolve_dataset_ids("dlk"))]
-fig = px.imshow(
-    df_train,
-    text_auto=".0%",
-    color_continuous_scale=colors,
-    height=800,
-    width=800,
-)
-fig.write_image(path / "v2_q1_datasets.png", scale=3)
-fig.show()
-
-df_probes = df.copy()
-df_probes["probe_method"] = df_probes["probe_method"].replace(
-    {
-        **{p: f"{p.upper()} (unsup)" for p in UNSUPERVISED_PROBES},
-        **{p: f"{p.upper()} (sup)" for p in SUPERVISED_PROBES},
-    }
-)
-# df_probes = df_probes.query("~is_supervised")
-df_probes = df_probes[df_probes["train"] != df_probes["eval"]]
-df_probes = (
-    df_probes.groupby(["probe_method", "eval"])["generalizes"].mean().reset_index()
-)
-df_probes = pd.concat(
-    [
-        df_probes,
-        df_probes.groupby("probe_method")["generalizes"]
-        .mean()
-        .reset_index()
-        .assign(eval="all"),
-    ]
-)
-probe_order = (
-    df_probes[df_probes["eval"] == "all"]
-    .sort_values("generalizes", ascending=False)["probe_method"]
-    .to_list()
-)
-df_probes = (
-    df_probes.pivot(index="probe_method", columns="eval", values="generalizes")
-    .reindex(probe_order, axis=0)
-    .reindex([*train_order, "all"], axis=1)
-)
-fig = px.imshow(
-    df_probes,
-    text_auto=".0%",
-    color_continuous_scale=colors,
-    width=800,
-)
-fig.write_image(path / "v2_q2_probes.png", scale=3)
-fig.show()
-
-# %%
-ranked = (
-    df.query("train != eval")
-    # .query("layer == 20")
-    # .query("probe_method == 'dim'")
-    .groupby(["train", "probe_method", "layer"])["generalizes"]
-    .mean()
-    .rename("num_datasets_generalized")
-    .sort_values(ascending=False)
-    .reset_index()
-    # .head(20)
-)
-# ranked = ranked.join(
-#     df.query("eval == 'truthful_qa'")
-#     .set_index(["train", "probe_method", "layer"])["accuracy"]
-#     .rename("truthful_qa"),
-#     on=["train", "probe_method", "layer"],
-# )
-# fig = px.box(
-#     ranked,
-#     x="num_datasets_generalized",
-#     y="truthful_qa",
-#     # color="layer",
-#     # symbol="probe_method",
-# )
-# fig.add_hline(y=0.47, line_dash="dot", line_color="gray")
-# fig.show()
-ranked
-
-# %%
-(truthful_qa_eval,) = run_logprobs_pipeline(
-    llm_ids=["Llama-2-13b-chat-hf"],
-    eval_datasets=[DatasetIdFilter("truthful_qa")],
-)
-truthful_qa_eval.model_dump()

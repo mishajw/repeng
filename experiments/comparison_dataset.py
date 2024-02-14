@@ -1,37 +1,49 @@
 import torch
 
 from repeng.datasets.activations.creation import create_activations_dataset
-from repeng.datasets.elk.types import DatasetId
-from repeng.datasets.elk.utils.collections import resolve_dataset_ids
+from repeng.datasets.elk.utils.collections import (
+    DatasetCollectionId,
+    resolve_dataset_ids,
+)
 from repeng.datasets.elk.utils.limits import Limits, SplitLimits
 
-validation_only_datasets: list[DatasetId] = [
-    *resolve_dataset_ids("dlk-val"),
-    *resolve_dataset_ids("repe-val"),
-    *resolve_dataset_ids("got-val"),
-    "truthful_qa",
-]
+"""
+18 datasets
+ * 20 layers
+ * 1 token
+ * (400 + 400 + 800) questions
+ * 3 answers
+ * 5120 hidden dim size
+ * 2 bytes
+= 17GB
+"""
+
+collections: list[DatasetCollectionId] = ["dlk", "repe", "got"]
 create_activations_dataset(
-    tag="datasets_2024-02-08_v1",
-    llm_ids=["Llama-2-7b-chat-hf"],
-    dataset_ids=resolve_dataset_ids("all"),
+    tag="datasets_2024-02-13_v1",
+    llm_ids=["Llama-2-13b-chat-hf"],
+    dataset_ids=[
+        dataset_id
+        for collection in collections
+        for dataset_id in resolve_dataset_ids(collection)
+    ],
     group_limits=Limits(
         default=SplitLimits(
             train=400,
-            train_hparams=100,
-            validation=200,
+            train_hparams=400,
+            validation=800,
         ),
         by_dataset={
-            dataset_id: SplitLimits(
+            "truthful_qa": SplitLimits(
                 train=0,
-                train_hparams=100,
-                validation=1000,
+                train_hparams=0,
+                validation=800,
             )
-            for dataset_id in validation_only_datasets
         },
     ),
     num_tokens_from_end=1,
     device=torch.device("cuda"),
-    layers_start=None,
+    layers_start=1,
     layers_end=None,
+    layers_skip=2,
 )
