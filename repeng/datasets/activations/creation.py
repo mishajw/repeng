@@ -28,6 +28,7 @@ def create_activations_dataset(
     num_tokens_from_end: int | None,
     layers_start: int | None,
     layers_end: int | None,
+    layers_skip: int | None,
 ) -> list[ActivationResultRow]:
     mcontext = MContext(Path("output/create-activations-dataset"))
     inputs = (
@@ -59,6 +60,7 @@ def create_activations_dataset(
                 last_n_tokens=num_tokens_from_end,
                 points_start=layers_start,
                 points_end=layers_end,
+                points_skip=layers_skip,
             ),
             to="pickle",
         )

@@ -28,8 +28,9 @@ def get_model_activations(
     *,
     text: str,
     last_n_tokens: int | None,
-    points_start: int | None = None,
-    points_end: int | None = None,
+    points_start: int | None,
+    points_end: int | None,
+    points_skip: int | None,
 ) -> ActivationRow:
     assert last_n_tokens is None or last_n_tokens > 0, last_n_tokens
 
@@ -38,7 +39,7 @@ def get_model_activations(
     tokens = llm.tokenizer.convert_tokens_to_ids(tokens_str)
     tokens = torch.tensor([tokens], device=next(llm.model.parameters()).device)
 
-    points = llm.points[points_start:points_end]
+    points = llm.points[points_start:points_end:points_skip]
     with grab_many(llm.model, points) as activation_fn:
         output = llm.model.forward(tokens)
         logits: torch.Tensor = output.logits
