@@ -27,17 +27,24 @@ datasets = dataset_ids.map_cached(
 ).flat_map(lambda _, dataset: {key: row for key, row in dataset.rows.items()})
 
 # %%
+groups: dict[DatasetId, str] = {
+    **{d: "dlk" for d in resolve_dataset_ids("dlk")},
+    **{d: "repe" for d in resolve_dataset_ids("repe")},
+    **{d: "repe" for d in resolve_dataset_ids("repe-qa")},
+    **{d: "got" for d in resolve_dataset_ids("got")},
+}
 df = pd.DataFrame([row.model_dump() for row in datasets.get()])
 df["word_counts"] = df["text"].apply(lambda row: len(row.split()))
+df["dataset_group"] = df["dataset_id"].apply(lambda x: groups.get(x, "misc"))
 df  # type: ignore
 
 # %%
 px.bar(
-    df.groupby(["dataset_id", "split"]).size().reset_index(),
+    df.groupby(["dataset_id", "dataset_group", "split"]).size().reset_index(),
     title="Num rows by dataset & split",
     x="dataset_id",
     y=0,
-    color="dataset_id",
+    color="dataset_group",
     facet_row="split",
     log_y=True,
     height=1000,
@@ -45,18 +52,34 @@ px.bar(
 
 # %%
 px.bar(
-    df.groupby(["dataset_id", "split"])["group_id"]  # type: ignore
+    df.groupby(["dataset_id", "dataset_group", "split"])["group_id"]  # type: ignore
     .nunique()
     .rename("num_groups")  # type: ignore
     .reset_index(),
     title="Num groups by dataset & split",
     x="dataset_id",
     y="num_groups",
-    color="dataset_id",
+    color="dataset_group",
     facet_row="split",
     log_y=True,
     height=1000,
 )
+
+# %%
+px.bar(
+    df.groupby(["dataset_id", "split", "group"])["answer_type"]  # type: ignore
+    .nunique()
+    .rename("num_groups")  # type: ignore
+    .reset_index(),
+    title="Num answer types by dataset & split",
+    x="dataset_id",
+    y="num_groups",
+    color="group",
+    facet_row="split",
+    height=1000,
+    category_orders={"group": ["dlk", "repe", "got", "misc"]},
+)
+
 
 # %%
 px.bar(
