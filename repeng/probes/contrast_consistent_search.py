@@ -7,7 +7,6 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 from jaxtyping import Bool, Float, Int64
-from tqdm import tqdm
 from typing_extensions import override
 
 from repeng.probes.base import BaseProbe, PredictResult
@@ -56,6 +55,7 @@ def train_ccs_probe(
     # Although CCS is technically unsupervised, we need the labels for multiple-choice
     # questions so that we can reduce answers into a true/false pair.
     labels: Bool[np.ndarray, "n"],  # noqa: F821
+    attempts: int = 2,
 ) -> CcsProbe:
     if answer_types is not None:
         activations = normalize_by_group(activations, answer_types)
@@ -79,17 +79,29 @@ def train_ccs_probe(
 
     _, hidden_dim = activations_1.shape
     probe = CcsProbe(hidden_dim=hidden_dim)
-    optimizer = torch.optim.Adam(probe.parameters(), lr=config.lr)
+    optimizer = torch.optim.LBFGS(probe.parameters(), lr=0.1, max_iter=100)
 
-    bar = tqdm(range(config.num_steps))
-    for _ in bar:
+    def get_loss():
+        optimizer.zero_grad()
         probs_1: torch.Tensor = probe(activations_1)
         probs_2: torch.Tensor = probe(activations_2)
         loss_consistency = (probs_1 - (1 - probs_2)).pow(2).mean()
         loss_confidence = torch.min(probs_1, probs_2).pow(2).mean()
         loss = loss_consistency + loss_confidence
         loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-        bar.set_postfix(loss=loss.item())
+        return loss.item()
+
+    optimizer.step(closure=get_loss)
+    loss = get_loss()
+    if loss > 0.2:
+        if attempts > 0:
+            return train_ccs_probe(
+                config=config,
+                activations=activations,
+                groups=groups,
+                answer_types=answer_types,
+                labels=labels,
+                attempts=attempts - 1,
+            )
+        raise ValueError(f"CCS probe did not converge: {loss} >= 0.2")
     return probe.eval()
