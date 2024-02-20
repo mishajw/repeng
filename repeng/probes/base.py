@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import numpy as np
-from jaxtyping import Bool, Float, Int64
+from jaxtyping import Float, Int64
 from typing_extensions import override
 
 
@@ -37,7 +37,6 @@ class BaseGroupedProbe(BaseProbe, ABC):
 @dataclass
 class PredictResult:
     logits: Float[np.ndarray, "n"]  # noqa: F821
-    labels: Bool[np.ndarray, "n"]  # noqa: F821
 
 
 @dataclass
@@ -50,7 +49,4 @@ class DotProductProbe(BaseProbe):
         activations: Float[np.ndarray, "n d"],  # noqa: F722
     ) -> PredictResult:
         logits = activations @ self.probe
-        return PredictResult(
-            logits=logits,
-            labels=logits > 0,
-        )
+        return PredictResult(logits=logits)

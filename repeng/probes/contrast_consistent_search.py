@@ -34,10 +34,7 @@ class CcsProbe(torch.nn.Module, BaseProbe):
         activations: Float[np.ndarray, "n d"],  # noqa: F722
     ) -> PredictResult:
         probabilities = self(torch.tensor(activations, dtype=torch.float32)).numpy()
-        return PredictResult(
-            logits=probabilities,
-            labels=probabilities > 0.5,
-        )
+        return PredictResult(logits=probabilities)
 
 
 @dataclass

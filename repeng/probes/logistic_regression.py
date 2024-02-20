@@ -19,10 +19,7 @@ class LogisticRegressionProbe(BaseProbe):
         activations: Float[np.ndarray, "n d"],  # noqa: F722
     ) -> PredictResult:
         logits = self.model.decision_function(activations)
-        return PredictResult(
-            logits=logits,
-            labels=logits > 0,
-        )
+        return PredictResult(logits=logits)
 
 
 @dataclass
@@ -37,10 +34,7 @@ class LogisticRegressionGroupedProbe(BaseGroupedProbe, LogisticRegressionProbe):
     ) -> PredictResult:
         activations_centered = _center_pairs(activations, pairs)
         logits = self.model.decision_function(activations_centered)
-        return PredictResult(
-            logits=logits,
-            labels=logits > 0,
-        )
+        return PredictResult(logits=logits)
 
 
 def train_lr_probe(
