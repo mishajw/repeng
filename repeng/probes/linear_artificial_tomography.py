@@ -1,6 +1,13 @@
 """
-Replication of LAT probes described in <https://arxiv.org/abs/2310.01405>.
-See appendix C.1
+Replication of LAT probes described in <https://arxiv.org/abs/2310.01405>. See appendix
+C.1.
+
+Methodology:
+1. Given a set of activations, randomly sample pairs without replacement.
+2. Compute the difference between each pair.
+3. Normalize the differences by subtracting the mean difference.
+4. Take the first principle component of the normalized differences. This results in the
+probe.
 """
 
 import random

@@ -3,6 +3,18 @@ Implementation of PCA based probes.
 
 Grouped PCA probe is equivalent to CRC-TPC described in
 <https://arxiv.org/abs/2212.03827>.
+
+Methodology for ungrouped PCA probes:
+1. Given a set of activations.
+2. Subtract the mean activation from each activation.
+3. Take the first principle component of the normalized activations. This results in the
+probe.
+
+Methodology for grouped PCA probes:
+1. Given a set of activations.
+2. Subtract the questions' mean activation from each activation.
+3. Take the first principle component of the normalized activations. This results in the
+probe.
 """
 
 import numpy as np

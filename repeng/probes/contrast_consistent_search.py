@@ -1,5 +1,17 @@
 """
 Replication of the CCS probes described in <https://arxiv.org/abs/2212.03827>.
+
+Methodology:
+1. Given a set of activations for questions and answer pairs.
+2. For each question, take an arbitrary true and false question answer pair.
+3. Optimize a linear probe to discover what contrasts these true and false pairs.
+  a. The probe should be consistent. The probability of one statement should be equal to
+  the opposite of the probability of the other pair:
+    p(x) = 1 - p(y).
+  b. The probe should be confident. The probability shouldn't equal 0.5:
+    p(x) != p(y) != 0.5.
+
+N.B.: We sometimes find that the probe does't converge. We retry the optimization twice.
 """
 
 from dataclasses import dataclass

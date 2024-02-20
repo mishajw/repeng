@@ -3,6 +3,11 @@ Replication of difference-in-means probes.
 
 See DIM probes in <https://arxiv.org/abs/2312.01037v1> and MMP described in
 <https://arxiv.org/abs/2310.06824>.
+
+Methodology:
+1. Given a set of activations, and whether they respond to true or false statements.
+2. Compute the difference in means between the true and false activations. This is the
+probe.
 """
 
 import numpy as np
