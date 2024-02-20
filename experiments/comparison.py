@@ -1,7 +1,7 @@
 # %%
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence, cast
+from typing import Any, Sequence, cast
 
 import numpy as np
 import pandas as pd
@@ -415,10 +415,10 @@ df["generalizes_hparams"] = generalizes(
 )
 df["recovered_accuracy"] = df["accuracy"] / df["threshold"].clip(0, 1)
 df["recovered_accuracy_hparams"] = df["accuracy_hparams"] / df["threshold"].clip(0, 1)
-df
+df  # type: ignore
 
 # %%
-px.bar(df.groupby("probe_method")["generalizes"].mean().sort_values())
+px.bar(df.groupby("probe_method")["generalizes"].mean().sort_values())  # type: ignore
 
 # %%
 px.scatter(
@@ -454,6 +454,8 @@ probes = (
     .reset_index()
 )
 results = []
+probe1: Any
+probe2: Any
 for probe1 in tqdm(probes.itertuples()):
     for probe2 in probes.itertuples():
         generalizes_sum1 = 0
