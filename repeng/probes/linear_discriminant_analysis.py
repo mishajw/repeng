@@ -23,7 +23,7 @@ from jaxtyping import Bool, Float
 from overrides import override
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
-from repeng.probes.base import BaseProbe, DotProductProbe, PredictResult
+from repeng.probes.base import BaseProbe, PredictResult
 
 
 @dataclass
@@ -45,8 +45,7 @@ def train_lda_probe(
     *,
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
-) -> DotProductProbe:
+) -> LdaProbe:
     lda = LinearDiscriminantAnalysis()
     lda.fit(activations, labels)
-    coefficients = lda.coef_[0]
-    return DotProductProbe(coefficients)
+    return LdaProbe(lda)
