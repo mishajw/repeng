@@ -15,9 +15,11 @@ from repeng.probes.random import train_random_probe
 
 ProbeMethod = Literal["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g", "rand"]
 
+ALL_PROBES = ["ccs", "lat", "dim", "lda", "lr", "lr-g", "pca", "pca-g"]
 SUPERVISED_PROBES: list[ProbeMethod] = ["dim", "lda", "lr", "lr-g"]
-UNSUPERVISED_PROBES: list[ProbeMethod] = ["ccs", "lat", "pca", "pca-g"]
-ALL_PROBES: list[ProbeMethod] = SUPERVISED_PROBES + UNSUPERVISED_PROBES
+UNSUPERVISED_PROBES: list[ProbeMethod] = list(set(ALL_PROBES) - set(SUPERVISED_PROBES))
+GROUPED_PROBES: list[ProbeMethod] = ["ccs", "lr-g", "pca-g"]
+UNGROUPED_PROBES: list[ProbeMethod] = list(set(ALL_PROBES) - set(GROUPED_PROBES))
 
 
 def train_probe(
