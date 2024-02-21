@@ -1,3 +1,20 @@
+"""
+Logistic regression based probes.
+
+Methodology for ungrouped logistic regression:
+1. Given a set of activations, and whether each activation is from a true or false
+statement.
+2. Fit a linear probe using scikit's LogisticRegression implementation. The probe takes
+in the activations and predicts the label.
+
+Methodology for grouped logistic regression:
+1. Given a set of activations, and whether each activation is from a true or false
+statement.
+2. Subtract the average activation of each group from each group member.
+2. Fit a linear probe using scikit's LogisticRegression implementation. The probe takes
+in the group-normalized activations and predicts the label.
+"""
+
 from dataclasses import dataclass
 
 import numpy as np
