@@ -14,6 +14,8 @@ for more details.
 
 Intuitively, this takes the truth direction and then accounts for interference from
 other features.
+
+Regularization: None.
 """
 
 from dataclasses import dataclass

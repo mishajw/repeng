@@ -8,6 +8,8 @@ Methodology:
 1. Given a set of activations, and whether they respond to true or false statements.
 2. Compute the difference in means between the true and false activations. This is the
 probe.
+
+Regularization: None.
 """
 
 import numpy as np

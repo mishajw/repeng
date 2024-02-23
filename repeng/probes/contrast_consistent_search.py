@@ -12,6 +12,8 @@ Methodology:
     p(x) != p(y) != 0.5.
 
 N.B.: We sometimes find that the probe does't converge. We retry the optimization twice.
+
+Regularization: L2 regularization on the probe weights.
 """
 
 from dataclasses import dataclass
@@ -53,6 +55,7 @@ class CcsProbe(torch.nn.Module, BaseProbe):
 class CcsTrainingConfig:
     num_steps: int = 100
     lr: float = 0.001
+    weight_decay: float = 0.01
 
 
 def train_ccs_probe(
@@ -96,7 +99,10 @@ def train_ccs_probe(
         probs_2: torch.Tensor = probe(activations_2)
         loss_consistency = (probs_1 - (1 - probs_2)).pow(2).mean()
         loss_confidence = torch.min(probs_1, probs_2).pow(2).mean()
-        loss = loss_consistency + loss_confidence
+        loss_l2 = (
+            sum(param.norm() ** 2 for param in probe.parameters()) * config.weight_decay
+        )
+        loss = loss_consistency + loss_confidence + loss_l2
         loss.backward()
         return loss.item()
 

@@ -13,6 +13,8 @@ statement.
 2. Subtract the average activation of each group from each group member.
 2. Fit a linear probe using scikit's LogisticRegression implementation. The probe takes
 in the group-normalized activations and predicts the label.
+
+Regularization: C=1.
 """
 
 from dataclasses import dataclass

@@ -8,6 +8,8 @@ Methodology:
 3. Normalize the differences by subtracting the mean difference.
 4. Take the first principle component of the normalized differences. This results in the
 probe.
+
+Regularization: None.
 """
 
 import random

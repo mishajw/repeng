@@ -15,6 +15,8 @@ Methodology for grouped PCA probes:
 2. Subtract the questions' mean activation from each activation.
 3. Take the first principle component of the normalized activations. This results in the
 probe.
+
+Regularization: None.
 """
 
 import numpy as np
