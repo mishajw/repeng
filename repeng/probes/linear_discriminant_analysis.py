@@ -36,9 +36,7 @@ class LdaProbe(BaseProbe):
         activations: Float[np.ndarray, "n d"],  # noqa: F722
     ) -> PredictResult:
         logits = self.model.decision_function(activations)
-        return PredictResult(
-            logits=logits,
-        )
+        return PredictResult(logits=logits)
 
 
 def train_lda_probe(
