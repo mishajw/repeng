@@ -3,9 +3,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence, cast
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import scipy.cluster.hierarchy
+import scipy.spatial.distance
 from dotenv import load_dotenv
 from mppr import MContext
 from pydantic import BaseModel
@@ -386,12 +389,6 @@ results = run_pipeline(
 
 # %%
 df = to_dataframe(results)
-df["recovered_accuracy"] = (
-    df["accuracy"].to_numpy() / df["threshold"].to_numpy()
-).clip(0, 1)
-df["recovered_accuracy_hparams"] = (
-    df["accuracy_hparams"].to_numpy() / df["threshold"].to_numpy()
-).clip(0, 1)
 thresholds_idx = df.query("train == eval").groupby("eval")["accuracy_hparams"].idxmax()
 thresholds = (
     df.loc[thresholds_idx][["eval", "accuracy", "accuracy_n"]]
@@ -404,6 +401,12 @@ thresholds = (
     .set_index("eval")
 )
 df = df.join(thresholds, on="eval")
+df["recovered_accuracy"] = (
+    df["accuracy"].to_numpy() / df["threshold"].to_numpy()
+).clip(0, 1)
+df["recovered_accuracy_hparams"] = (
+    df["accuracy_hparams"].to_numpy() / df["threshold"].to_numpy()
+).clip(0, 1)
 thresholds  # type: ignore
 
 # %%
@@ -639,11 +642,10 @@ fig.show()
 """
 2. Examining dataset performance: matrix
 """
-dataset_ids = DLK_DATASETS + REPE_DATASETS + GOT_DATASETS
 df_train = df.copy()
-df_train = df_train[df_train["train"].isin(dataset_ids)]  # type: ignore
 df_train = (
-    df_train.groupby(["train", "eval"])["recovered_accuracy"]  # type: ignore
+    df_train.query("layer >= 13")
+    .groupby(["train", "eval"])["recovered_accuracy"]  # type: ignore
     .mean()
     .reset_index()
 )
@@ -661,6 +663,9 @@ fig.write_image(path / "r3b_matrix.png", scale=3)
 fig.show()
 
 # %%
+"""
+2. Examining dataset performance: from and to
+"""
 df_sym = (
     pd.concat(
         [
@@ -687,6 +692,40 @@ fig = px.scatter(
 )
 fig.update_traces(textposition="bottom center")
 fig.write_image(path / "r3c_to_and_from.png", scale=3)
+fig.show()
+
+# %%
+"""
+2. Examining dataset performance: clustering
+"""
+df_train = df.copy()
+df_train = (
+    (
+        df_train.query("layer >= 13")
+        .groupby(["train", "eval"])["recovered_accuracy"]  # type: ignore
+        .mean()
+        .reset_index()
+    )
+    .pivot(index="train", columns="eval", values="recovered_accuracy")
+    .reindex(train_order, axis=0)
+    .reindex(train_order, axis=1)
+)
+adjacency_matrix = 1 - df_train.to_numpy()
+adjacency_matrix = (adjacency_matrix.T + adjacency_matrix) / 2
+condensed_dist_matrix = scipy.spatial.distance.squareform(
+    adjacency_matrix, checks=False
+)
+linkage = scipy.cluster.hierarchy.linkage(condensed_dist_matrix, "average")
+
+fig, ax = plt.subplots(figsize=(10, 7))
+scipy.cluster.hierarchy.dendrogram(linkage, ax=ax)
+ax.set_ylabel("1 - recovered accuracy")
+ax.set_xticklabels(
+    [df_train.index[int(label.get_text())] for label in ax.get_xticklabels()],
+    rotation=90,
+)
+fig.savefig(path / "r3d_clustering.png", dpi=300, bbox_inches="tight")
+fig.tight_layout()
 fig.show()
 
 # %%
