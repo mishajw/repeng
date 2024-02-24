@@ -22,7 +22,6 @@ from repeng.datasets.elk.utils.collections import (
     resolve_dataset_ids,
 )
 from repeng.datasets.elk.utils.filters import DatasetFilter, DatasetIdFilter
-from repeng.evals.logits import eval_logits_by_question, eval_logits_by_row
 from repeng.evals.probes import eval_probe_by_question, eval_probe_by_row
 from repeng.models.llms import LlmId
 from repeng.models.points import get_points
@@ -233,78 +232,6 @@ def _eval_probe_on_split(
 
 # %%
 """
-Pipeline for evaluating LLM performance based on logprobs.
-"""
-
-
-@dataclass
-class LogprobEvalSpec:
-    llm_id: LlmId
-    dataset: DatasetFilter
-
-
-class LogprobsPipelineResultRow(BaseModel, extra="forbid"):
-    llm_id: LlmId
-    eval_dataset: str
-    accuracy: float
-    row_accuracy: float
-    row_roc_auc: float
-    question_accuracy: float | None
-
-
-def run_logprobs_pipeline(
-    llm_ids: list[LlmId],
-    eval_datasets: Sequence[DatasetFilter],
-) -> list[LogprobsPipelineResultRow]:
-    return (
-        mcontext.create(
-            {
-                f"{llm_id}-{eval_dataset}": LogprobEvalSpec(llm_id, eval_dataset)
-                for llm_id in llm_ids
-                for eval_dataset in eval_datasets
-            }
-        )
-        .map_cached(
-            "logprob_evaluate",
-            lambda _, spec: _eval_logprobs(spec),
-            to="pickle",
-        )
-        .get()
-    )
-
-
-def _eval_logprobs(spec: LogprobEvalSpec) -> LogprobsPipelineResultRow:
-    arrays = dataset.get(
-        llm_id=spec.llm_id,
-        dataset_filter=spec.dataset,
-        split="validation",
-        point_name="logprobs",
-        token_idx=-1,
-        limit=None,
-    )
-    row_result = eval_logits_by_row(
-        logits=arrays.activations,
-        labels=arrays.labels,
-    )
-    question_result = None
-    if arrays.groups is not None:
-        question_result = eval_logits_by_question(
-            logits=arrays.activations,
-            labels=arrays.labels,
-            groups=arrays.groups,
-        )
-    return LogprobsPipelineResultRow(
-        llm_id=spec.llm_id,
-        eval_dataset=spec.dataset.get_name(),
-        accuracy=question_result.accuracy if question_result else row_result.accuracy,
-        row_accuracy=row_result.accuracy,
-        question_accuracy=question_result.accuracy if question_result else None,
-        row_roc_auc=row_result.roc_auc_score,
-    )
-
-
-# %%
-"""
 Utilities for visualizing the results.
 """
 
@@ -318,23 +245,10 @@ DIMS = {
 DLK_DATASETS = resolve_dataset_ids("dlk")
 REPE_DATASETS = resolve_dataset_ids("repe")
 GOT_DATASETS = resolve_dataset_ids("got")
-BASE_COLORS = list(reversed(px.colors.sequential.YlOrRd))
-# COLORS = [
-#     [0.0, "#222"],
-#     [1e-5, BASE_COLORS[0]],
-#     *[
-#         [(i + 1) / (len(BASE_COLORS) - 1), color]
-#         for i, color in enumerate(BASE_COLORS[1:-1])
-#     ],
-#     [1 - 1e-5, BASE_COLORS[-1]],
-#     [1, px.colors.sequential.Greens[len(px.colors.sequential.Greens) // 2]],
-# ]
-COLORS = BASE_COLORS
+COLORS = list(reversed(px.colors.sequential.YlOrRd))
 
 
-def to_dataframe(
-    results: Sequence[PipelineResultRow | LogprobsPipelineResultRow],
-) -> pd.DataFrame:
+def to_dataframe(results: Sequence[PipelineResultRow]) -> pd.DataFrame:
     df = pd.DataFrame([row.model_dump() for row in results])
     df = df.rename(
         columns={
