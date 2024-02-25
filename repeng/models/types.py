@@ -33,7 +33,18 @@ Llama2Id = Literal[
     "Llama-2-13b-chat-hf",
     "Llama-2-70b-chat-hf",
 ]
-LlmId = PythiaId | PythiaDpoId | Gpt2Id | Llama2Id
+MistralId = Literal[
+    "Mistral-7B",
+    "Mistral-7B-Instruct",
+]
+GemmaId = Literal[
+    "gemma-2b",
+    "gemma-7b",
+    "gemma-2b-it",
+    "gemma-7b-it",
+]
+
+LlmId = PythiaId | PythiaDpoId | Gpt2Id | Llama2Id | MistralId | GemmaId
 
 
 PYTHIA_DPO_TO_PYTHIA: dict[PythiaDpoId, PythiaId] = {

@@ -1,13 +1,21 @@
 from typing import Any, cast, get_args, overload
 
-from transformers import GPT2LMHeadModel, GPTNeoXForCausalLM, LlamaForCausalLM
+from transformers import (
+    GemmaForCausalLM,
+    GPT2LMHeadModel,
+    GPTNeoXForCausalLM,
+    LlamaForCausalLM,
+    MistralForCausalLM,
+)
 
 from repeng.hooks.points import Point, TupleTensorExtractor
 from repeng.models.types import (
     PYTHIA_DPO_TO_PYTHIA,
+    GemmaId,
     Gpt2Id,
     Llama2Id,
     LlmId,
+    MistralId,
     PythiaDpoId,
     PythiaId,
 )
@@ -31,6 +39,16 @@ _LLAMA2_NUM_LAYERS: dict[Llama2Id, int] = {
     "Llama-2-70b-hf": 80,
     "Llama-2-70b-chat-hf": 80,
 }
+_MISTRAL_NUM_LAYERS: dict[MistralId, int] = {
+    "Mistral-7B": 32,
+    "Mistral-7B-Instruct": 32,
+}
+_GEMMA_NUM_LAYERS: dict[GemmaId, int] = {
+    "gemma-2b": 18,
+    "gemma-2b-it": 18,
+    "gemma-7b": 28,
+    "gemma-7b-it": 28,
+}
 
 
 @overload
@@ -45,6 +63,16 @@ def get_points(llm_id: Gpt2Id) -> list[Point[GPT2LMHeadModel]]:
 
 @overload
 def get_points(llm_id: Llama2Id) -> list[Point[LlamaForCausalLM]]:
+    ...
+
+
+@overload
+def get_points(llm_id: MistralId) -> list[Point[MistralForCausalLM]]:
+    ...
+
+
+@overload
+def get_points(llm_id: GemmaId) -> list[Point[GemmaForCausalLM]]:
     ...
 
 
@@ -91,4 +119,26 @@ def llama2(llama2_id: Llama2Id) -> list[Point[LlamaForCausalLM]]:
             tensor_extractor=TupleTensorExtractor(0),
         )
         for i in range(_LLAMA2_NUM_LAYERS[llama2_id])
+    ]
+
+
+def mistral(mistral_id: MistralId) -> list[Point[MistralForCausalLM]]:
+    return [
+        Point(
+            f"h{i}",
+            lambda model, i=i: model.model.layers[i],
+            tensor_extractor=TupleTensorExtractor(0),
+        )
+        for i in range(_MISTRAL_NUM_LAYERS[mistral_id])
+    ]
+
+
+def gemma(gemma_id: GemmaId) -> list[Point[GemmaForCausalLM]]:
+    return [
+        Point(
+            f"h{i}",
+            lambda model, i=i: model.model.layers[i],
+            tensor_extractor=TupleTensorExtractor(0),
+        )
+        for i in range(_GEMMA_NUM_LAYERS[gemma_id])
     ]

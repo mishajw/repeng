@@ -4,14 +4,30 @@ import torch
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    GemmaForCausalLM,
     GPT2LMHeadModel,
     GPTNeoXForCausalLM,
     LlamaForCausalLM,
+    MistralForCausalLM,
     PreTrainedTokenizerFast,
 )
 
 from repeng.models import points
-from repeng.models.types import Gpt2Id, Llama2Id, Llm, LlmId, PythiaDpoId, PythiaId
+from repeng.models.types import (
+    GemmaId,
+    Gpt2Id,
+    Llama2Id,
+    Llm,
+    LlmId,
+    MistralId,
+    PythiaDpoId,
+    PythiaId,
+)
+
+_MISTRAL_HF_IDS: dict[MistralId, str] = {
+    "Mistral-7B": "mistralai/Mistral-7B-v0.1",
+    "Mistral-7B-Instruct": "mistralai/Mistral-7B-Instruct-v0.2",
+}
 
 
 @overload
@@ -41,6 +57,24 @@ def get_llm(
     ...
 
 
+@overload
+def get_llm(
+    llm_id: MistralId,
+    device: torch.device,
+    use_half_precision: bool,
+) -> Llm[MistralForCausalLM, PreTrainedTokenizerFast]:
+    ...
+
+
+@overload
+def get_llm(
+    llm_id: GemmaId,
+    device: torch.device,
+    use_half_precision: bool,
+) -> Llm[GemmaForCausalLM, PreTrainedTokenizerFast]:
+    ...
+
+
 def get_llm(
     llm_id: LlmId,
     device: torch.device,
@@ -54,6 +88,10 @@ def get_llm(
         return llama2(cast(Llama2Id, llm_id), device, use_half_precision)
     elif llm_id in get_args(PythiaDpoId):
         return pythia_dpo(cast(PythiaDpoId, llm_id), device, use_half_precision)
+    elif llm_id in get_args(MistralId):
+        return mistral(cast(MistralId, llm_id), device, use_half_precision)
+    elif llm_id in get_args(GemmaId):
+        return gemma(cast(GemmaId, llm_id), device, use_half_precision)
     else:
         raise ValueError(f"Unknown LLM ID: {llm_id}")
 
@@ -141,4 +179,43 @@ def llama2(
         model,
         tokenizer,
         points.llama2(llama_id),
+    )
+
+
+def mistral(
+    mistral_id: MistralId,
+    device: torch.device,
+    use_half_precision: bool,
+) -> Llm[MistralForCausalLM, PreTrainedTokenizerFast]:
+    dtype = torch.bfloat16 if use_half_precision else torch.float32
+    hf_id = _MISTRAL_HF_IDS[mistral_id]
+    tokenizer = AutoTokenizer.from_pretrained(hf_id)
+    assert isinstance(tokenizer, PreTrainedTokenizerFast)
+    model = AutoModelForCausalLM.from_pretrained(
+        hf_id, device_map=device, torch_dtype=dtype
+    )
+    assert isinstance(model, MistralForCausalLM)
+    return Llm(
+        model,
+        tokenizer,
+        points.mistral(mistral_id),
+    )
+
+
+def gemma(
+    gemma_id: GemmaId,
+    device: torch.device,
+    use_half_precision: bool,
+) -> Llm[GemmaForCausalLM, PreTrainedTokenizerFast]:
+    dtype = torch.bfloat16 if use_half_precision else torch.float32
+    tokenizer = AutoTokenizer.from_pretrained(f"google/{gemma_id}")
+    assert isinstance(tokenizer, PreTrainedTokenizerFast)
+    model = AutoModelForCausalLM.from_pretrained(
+        f"google/{gemma_id}", device_map=device, torch_dtype=dtype
+    )
+    assert isinstance(model, GemmaForCausalLM)
+    return Llm(
+        model,
+        tokenizer,
+        points.gemma(gemma_id),
     )
