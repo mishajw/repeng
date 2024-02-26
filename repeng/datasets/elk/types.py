@@ -19,28 +19,32 @@ DatasetId = Literal[
     "truthful_model_written",
     "true_false",
     "imdb",
+    "imdb/simple",
     "amazon_polarity",
     "ag_news",
     "dbpedia_14",
     "rte",
     "copa",
     "boolq",
+    "boolq/simple",
     "piqa",
-    "open_book_qa/qa",
-    "race/qa",
-    "arc_challenge/qa",
-    "arc_easy/qa",
-    "common_sense_qa/qa",
+    "open_book_qa/simple",
+    "race/simple",
+    "arc_challenge/simple",
+    "arc_easy/simple",
+    "common_sense_qa/simple",
 ]
 
 DlkDatasetId = Literal[
     "imdb",
+    "imdb/simple",
     "amazon_polarity",
     "ag_news",
     "dbpedia_14",
     "rte",
     "copa",
     "boolq",
+    "boolq/simple",
     "piqa",
 ]
 
@@ -54,6 +58,8 @@ GroupedDatasetId = Literal[
     "truthful_model_written",
     "true_false",
 ]
+
+TemplateType = Literal["repe", "dlk", "simple"]
 
 
 class BinaryRow(BaseModel, extra="forbid"):
@@ -74,9 +80,6 @@ class BinaryRow(BaseModel, extra="forbid"):
     If not set, the prompt template doesn't include any consistent answer templates
     (e.g. it's just question-answer).
     """
-
-
-RepeTemplateId = Literal["qa", "repe"]
 
 
 def is_dataset_grouped(dataset_id: DatasetId) -> bool:

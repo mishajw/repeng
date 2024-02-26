@@ -12,7 +12,7 @@ DatasetCollectionId = Literal[
     "dlk",
     "repe",
     "got",
-    "repe-qa",
+    "repe-simple",
 ]
 
 _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
@@ -42,14 +42,14 @@ _DATASET_COLLECTIONS: dict[DatasetCollectionId, DatasetCollectionFilter] = {
             "common_sense_qa",
         ],
     ),
-    "repe-qa": DatasetCollectionFilter(
-        "repe-qa",
+    "repe-simple": DatasetCollectionFilter(
+        "repe-simple",
         [
-            "open_book_qa/qa",
-            "race/qa",
-            "arc_challenge/qa",
-            "arc_easy/qa",
-            "common_sense_qa/qa",
+            "open_book_qa/simple",
+            "race/simple",
+            "arc_challenge/simple",
+            "arc_easy/simple",
+            "common_sense_qa/simple",
         ],
     ),
     "got": DatasetCollectionFilter(

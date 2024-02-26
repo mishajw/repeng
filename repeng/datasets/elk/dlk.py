@@ -40,6 +40,9 @@ _DATASET_SPECS: dict[DlkDatasetId, _DatasetSpec] = {
     "boolq": _DatasetSpec("super_glue", "boolq"),
     # Common sense reasoning
     "piqa": _DatasetSpec("piqa"),
+    # Other formats:
+    "boolq/simple": _DatasetSpec("super_glue", "boolq"),
+    "imdb/simple": _DatasetSpec("imdb"),
 }
 
 
@@ -125,6 +128,12 @@ _TEMPLATES: dict[DlkDatasetId, _DlkTemplate] = {
         args=["passage", "question"],
         insert_label_options=False,
     ),
+    "boolq/simple": _DlkTemplate(
+        "{passage}\nQuestion: {question}?\nAnswer: {label}",
+        labels=["no", "yes"],
+        args=["passage", "question"],
+        insert_label_options=False,
+    ),
     "copa": _DlkTemplate(
         'Consider the following premise: "{premise}"\n'
         "Choice 1: {choice1}\n"
@@ -163,6 +172,12 @@ _TEMPLATES: dict[DlkDatasetId, _DlkTemplate] = {
         "Between {label1} and {label2}, the sentiment of this example is {label}",
         labels=["Negative", "Positive"],
         args=["text"],
+    ),
+    "imdb/simple": _DlkTemplate(
+        "{text}\nThe sentiment is {label}",
+        labels=["negative", "positive"],
+        args=["text"],
+        insert_label_options=False,
     ),
     "piqa": _DlkTemplate(
         "Goal: {goal}\n"

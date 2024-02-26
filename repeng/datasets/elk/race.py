@@ -2,15 +2,15 @@ from typing import Any
 
 import datasets
 
-from repeng.datasets.elk.types import BinaryRow, DatasetId, RepeTemplateId, Split
+from repeng.datasets.elk.types import BinaryRow, DatasetId, Split, TemplateType
 from repeng.datasets.utils.shuffles import deterministic_shuffle
 from repeng.datasets.utils.splits import split_train
 
-_DATASET_IDS: dict[RepeTemplateId, DatasetId] = {
+_DATASET_IDS: dict[TemplateType, DatasetId] = {
     "repe": "race",
-    "qa": "race/qa",
+    "simple": "race/simple",
 }
-_TEMPLATES: dict[RepeTemplateId, str] = {
+_TEMPLATES: dict[TemplateType, str] = {
     # Taken from https://arxiv.org/abs/2310.01405 D.1.7.
     "repe": (
         "Consider the correctness of the answer to the following question based on the "
@@ -22,19 +22,19 @@ _TEMPLATES: dict[RepeTemplateId, str] = {
         "Answer: {answer}\n"
         "The probability of the answer being correct is"
     ),
-    "qa": "Article: {article}\n\nQuestion: {question}\nAnswer: {answer}",
+    "simple": "Article: {article}\n\nQuestion: {question}\nAnswer: {answer}",
 }
 _ANSWER_TO_INDEX = {"A": 0, "B": 1, "C": 2, "D": 3}
 
 
-def get_race(template_id: RepeTemplateId) -> dict[str, BinaryRow]:
+def get_race(template_id: TemplateType) -> dict[str, BinaryRow]:
     return {
         **_get_race_split("train", template_id=template_id),
         **_get_race_split("validation", template_id=template_id),
     }
 
 
-def _get_race_split(split: Split, template_id: RepeTemplateId) -> dict[str, BinaryRow]:
+def _get_race_split(split: Split, template_id: TemplateType) -> dict[str, BinaryRow]:
     dataset_id = _DATASET_IDS[template_id]
     template = _TEMPLATES[template_id]
     dataset: Any = datasets.load_dataset("race", "all")

@@ -38,6 +38,7 @@ def get_model_activations(
     assert isinstance(tokens, torch.Tensor)
     tokens = tokens.to(next(llm.model.parameters()).device)
     tokens_str = llm.tokenizer.convert_ids_to_tokens(tokens.squeeze().tolist())
+    assert isinstance(tokens_str, list)
 
     points = llm.points[points_start:points_end:points_skip]
     with grab_many(llm.model, points) as activation_fn:
