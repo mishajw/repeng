@@ -85,6 +85,10 @@ def get_points(llm_id: LlmId) -> list[Point[Any]]:
         return llama2(cast(Llama2Id, llm_id))
     elif llm_id in get_args(PythiaDpoId):
         return pythia(PYTHIA_DPO_TO_PYTHIA[cast(PythiaDpoId, llm_id)])
+    elif llm_id in get_args(MistralId):
+        return mistral(cast(MistralId, llm_id))
+    elif llm_id in get_args(GemmaId):
+        return gemma(cast(GemmaId, llm_id))
     else:
         raise ValueError(f"Unknown LLM ID: {llm_id}")
 
