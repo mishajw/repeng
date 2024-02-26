@@ -50,7 +50,7 @@ def _get_race_split(split: Split, template_id: RepeTemplateId) -> dict[str, Bina
                 split=split_train(split, seed="race", row_id=group_id),
                 group_id=group_id,
                 text=template.format(**format_args),
-                is_true=_ANSWER_TO_INDEX[row["answer"]] == option_idx,
+                label=_ANSWER_TO_INDEX[row["answer"]] == option_idx,
                 format_args=format_args,
             )
     return results

@@ -91,7 +91,7 @@ def _get_dlk_dataset(
                 split=split_train(split, seed=dataset_id, row_id=str(row_idx)),
                 group_id=str(row_idx),
                 text=prompt,
-                is_true=label == true_label,
+                label=label == true_label,
                 format_args=format_args,
                 # As labels are sorted, true/false questions will be consistent.
                 answer_type=str(label_idx),

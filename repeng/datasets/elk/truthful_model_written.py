@@ -30,7 +30,7 @@ def get_truthful_model_written() -> dict[str, BinaryRow]:
                     group_id=row["key"],
                     split=split_to_all(_DATASET_ID, row["key"]),
                     text=text,
-                    is_true=(row["value"]["honest"] and answer)
+                    label=(row["value"]["honest"] and answer)
                     or (not row["value"]["honest"] and not answer),
                     format_args=dict(),
                 )

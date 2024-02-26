@@ -60,7 +60,7 @@ class BinaryRow(BaseModel, extra="forbid"):
     dataset_id: DatasetId
     split: Split
     text: str
-    is_true: bool
+    label: bool
     format_args: dict[str, str]
     group_id: str | None = None
     """

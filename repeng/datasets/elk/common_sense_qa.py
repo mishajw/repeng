@@ -48,7 +48,7 @@ def _get_common_sense_qa_split(
                 split=split_train(split, seed="common_sense_qa", row_id=group_id),
                 group_id=group_id,
                 text=template.format(**format_args),
-                is_true=row["answerKey"] == choice_label,
+                label=row["answerKey"] == choice_label,
                 format_args=format_args,
             )
     return results

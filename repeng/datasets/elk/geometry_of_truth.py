@@ -76,7 +76,7 @@ def _get_paired(
                 group_id=str(index),
                 split=split_to_all(dataset_id, str(index)),
                 text=cast(str, row["statement"]),
-                is_true=row["label"] == 1,
+                label=row["label"] == 1,
                 format_args=dict(),
                 answer_type=answer_type,
             )
@@ -95,7 +95,7 @@ def _get_unpaired(
             dataset_id=dataset_id,
             split=split_to_all(dataset_id, str(index)),
             text=cast(str, row["statement"]),
-            is_true=row["label"] == 1,
+            label=row["label"] == 1,
             format_args=dict(),
         )
     return result

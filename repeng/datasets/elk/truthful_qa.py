@@ -34,7 +34,7 @@ def get_truthful_qa() -> dict[str, BinaryRow]:
                 split=split_validation(seed=_DATASET_ID, row_id=str(group_id)),
                 group_id=str(group_id),
                 text=_TEMPLATE.format(**format_args),
-                is_true=is_correct == 1,
+                label=is_correct == 1,
                 format_args=format_args,
             )
     return results

@@ -59,7 +59,7 @@ def _get_arc_split(
                 split=split_train(split, seed="arc" + subset, row_id=group_id),
                 group_id=group_id,
                 text=template.format(**format_args),
-                is_true=row["answerKey"] == choice_label,
+                label=row["answerKey"] == choice_label,
                 format_args=format_args,
             )
     return results

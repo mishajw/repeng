@@ -25,7 +25,7 @@ def get_true_false_dataset() -> dict[str, BinaryRow]:
                 dataset_id=_DATASET_ID,
                 split=split_to_all(_DATASET_ID, f"{csv_name}-{index}"),
                 text=cast(str, row["statement"]),
-                is_true=row["label"] == 1,
+                label=row["label"] == 1,
                 format_args=dict(),
             )
     return result

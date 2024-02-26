@@ -70,7 +70,7 @@ def create_activations_dataset(
                 dataset_id=input.dataset_id,
                 split=input.split,
                 answer_type=input.answer_type,
-                label=input.is_true,
+                label=input.label,
                 activations=activations.activations,
                 prompt_logprobs=activations.token_logprobs.sum().item(),
                 group_id=input.group_id,
