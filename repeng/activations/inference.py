@@ -34,10 +34,10 @@ def get_model_activations(
 ) -> ActivationRow:
     assert last_n_tokens is None or last_n_tokens > 0, last_n_tokens
 
-    tokens = llm.tokenizer.encode(text)
-    tokens_str = llm.tokenizer.tokenize(text)
-    tokens = llm.tokenizer.convert_tokens_to_ids(tokens_str)
-    tokens = torch.tensor([tokens], device=next(llm.model.parameters()).device)
+    tokens = llm.tokenizer.encode(text, return_tensors="pt")
+    assert isinstance(tokens, torch.Tensor)
+    tokens = tokens.to(next(llm.model.parameters()).device)
+    tokens_str = llm.tokenizer.convert_ids_to_tokens(tokens.squeeze().tolist())
 
     points = llm.points[points_start:points_end:points_skip]
     with grab_many(llm.model, points) as activation_fn:
