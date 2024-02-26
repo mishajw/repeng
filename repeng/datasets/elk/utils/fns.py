@@ -33,12 +33,14 @@ _DATASET_FNS: dict[DatasetId, Callable[[], dict[str, BinaryRow]]] = {
     "truthful_model_written": lambda: get_truthful_model_written(),
     "true_false": get_true_false_dataset,
     "imdb": lambda: get_dlk_dataset("imdb"),
+    "imdb/simple": lambda: get_dlk_dataset("imdb/simple"),
     "amazon_polarity": lambda: get_dlk_dataset("amazon_polarity"),
     "ag_news": lambda: get_dlk_dataset("ag_news"),
     "dbpedia_14": lambda: get_dlk_dataset("dbpedia_14"),
     "rte": lambda: get_dlk_dataset("rte"),
     "copa": lambda: get_dlk_dataset("copa"),
     "boolq": lambda: get_dlk_dataset("boolq"),
+    "boolq/simple": lambda: get_dlk_dataset("boolq/simple"),
     "piqa": lambda: get_dlk_dataset("piqa"),
 }
 

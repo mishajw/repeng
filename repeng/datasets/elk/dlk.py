@@ -42,7 +42,7 @@ _DATASET_SPECS: dict[DlkDatasetId, _DatasetSpec] = {
     "piqa": _DatasetSpec("piqa"),
     # Other formats:
     "boolq/simple": _DatasetSpec("super_glue", "boolq"),
-    "imdb/simple": _DatasetSpec("imdb"),
+    "imdb/simple": _DatasetSpec("imdb", validation_name="test"),
 }
 
 
@@ -174,7 +174,7 @@ _TEMPLATES: dict[DlkDatasetId, _DlkTemplate] = {
         args=["text"],
     ),
     "imdb/simple": _DlkTemplate(
-        "{text}\nThe sentiment is {label}",
+        "{text}\nQuestion: What is the sentiment of the review?\nAnswer: {label}",
         labels=["negative", "positive"],
         args=["text"],
         insert_label_options=False,
