@@ -16,12 +16,12 @@ from repeng.datasets.elk.utils.limits import Limits, SplitLimits
 """
 
 create_activations_dataset(
-    tag="saliency_2024-02-24_mistralandgemma_v1",
+    tag="saliency_2024-02-26_v1",
     llm_ids=[
-        # "Llama-2-7b-hf",
-        # "Llama-2-7b-chat-hf",
-        # "Llama-2-13b-hf",
-        # "Llama-2-13b-chat-hf",
+        "Llama-2-7b-hf",
+        "Llama-2-7b-chat-hf",
+        "Llama-2-13b-hf",
+        "Llama-2-13b-chat-hf",
         "gemma-2b",
         "gemma-2b-it",
         "gemma-7b",
@@ -30,10 +30,10 @@ create_activations_dataset(
         "Mistral-7B-Instruct",
     ],
     dataset_ids=[
-        "boolq",
+        "boolq/simple",
+        "imdb/simple",
+        "race/simple",
         "got_cities",
-        "imdb",
-        "race",
     ],
     group_limits=Limits(
         default=SplitLimits(
