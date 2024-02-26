@@ -8,7 +8,6 @@ import pandas as pd
 import plotly.express as px
 from mppr import MContext
 from pydantic import BaseModel
-from sklearn.decomposition import PCA
 
 from repeng.activations.probe_preparations import ActivationArrayDataset
 from repeng.datasets.activations.types import ActivationResultRow
@@ -192,7 +191,7 @@ class PcaResult:
     llm_id: LlmId
     dataset: str
     point_name: str
-    saliency: int
+    saliency: float
 
 
 def run_pca_pipeline(
@@ -213,7 +212,7 @@ def run_pca_pipeline(
             }
         )
         .map_cached(
-            "pca-stds",
+            "pca-stds-v2",
             lambda _, spec: _compare_stds(spec),
             "pickle",
         )
@@ -242,7 +241,6 @@ def _compare_stds(spec: PcaSpec) -> PcaResult:
         activations=arrays.activations,
         labels=arrays.labels,
     )
-    pca = PCA(n_components=NUM_COMPONENTS).fit(arrays.activations)
 
     arrays = dataset.get(
         llm_id=spec.llm_id,
@@ -252,14 +250,15 @@ def _compare_stds(spec: PcaSpec) -> PcaResult:
         token_idx=-1,
         limit=None,
     )
-    pca_stds = pca.transform(arrays.activations).std(axis=0)
-    lr_std = (arrays.activations @ lr_probe.model.coef_.T).std(axis=0)
-
+    truth_direction = lr_probe.model.coef_.squeeze(0)
+    truth_direction /= np.linalg.norm(truth_direction)
+    truth_variance = np.var(arrays.activations @ truth_direction)
+    total_variance = np.var(arrays.activations, axis=0).sum()
     return PcaResult(
         llm_id=spec.llm_id,
         dataset=spec.dataset.get_name(),
         point_name=spec.point_name,
-        saliency=np.sum(pca_stds > lr_std),
+        saliency=truth_variance / total_variance,
     )
 
 
@@ -331,18 +330,16 @@ df = pd.DataFrame([asdict(r) for r in results])
 df["type"] = np.where(df["llm_id"].isin(CHAT_MODELS), "chat", "base")
 df["family"] = df["llm_id"].map(MODEL_FAMILIES)
 df["layer"] = df["point_name"].str.extract(r"h(\d+)").astype(int)
+df = df.query("saliency < 0.001 or layer > 5")
 df["layer"] = df.apply(
     lambda r: r.layer / len(get_points(r.llm_id)),
     axis=1,
 )
-df = df.query("layer >= 0")
-df["saliency_rank"] = df["saliency"] + 1
-df = df.query("saliency_rank < 1000")
 
 fig = px.line(
     df.sort_values("layer"),
     x="layer",
-    y="saliency_rank",
+    y="saliency",
     color="type",
     facet_col="dataset",
     facet_row="family",
