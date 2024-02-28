@@ -2,12 +2,13 @@ from pathlib import Path
 
 import torch
 from dotenv import load_dotenv
-from mppr import MContext
+from mppr import MContext, MDict
+from pydantic import BaseModel
 
 from repeng.activations.inference import get_model_activations
 from repeng.datasets.activations.types import ActivationResultRow
 from repeng.datasets.elk.types import BinaryRow, DatasetId
-from repeng.datasets.elk.utils.collections import get_datasets
+from repeng.datasets.elk.utils.fns import get_dataset
 from repeng.datasets.elk.utils.limits import Limits, limit_groups
 from repeng.models.llms import LlmId
 from repeng.models.loading import load_llm_oioo
@@ -15,8 +16,12 @@ from repeng.models.loading import load_llm_oioo
 assert load_dotenv()
 
 
-class BinaryRowWithLlm(BinaryRow):
+class _BinaryRowWithLlm(BinaryRow):
     llm_id: LlmId
+
+
+class _Dataset(BaseModel, extra="forbid"):
+    rows: dict[str, BinaryRow]
 
 
 def create_activations_dataset(
@@ -31,16 +36,20 @@ def create_activations_dataset(
     layers_skip: int | None,
 ) -> list[ActivationResultRow]:
     mcontext = MContext(Path("output/create-activations-dataset"))
+    dataset_ids_mdict: MDict[DatasetId] = mcontext.create(
+        {dataset_id: dataset_id for dataset_id in dataset_ids},
+    )
     inputs = (
-        mcontext.create_cached(
-            "init",
-            init_fn=lambda: get_datasets(dataset_ids),
-            to=BinaryRow,
+        dataset_ids_mdict.map_cached(
+            "datasets",
+            lambda _, dataset_id: _Dataset(rows=get_dataset(dataset_id)),
+            to=_Dataset,
         )
+        .flat_map(lambda _, dataset: {key: row for key, row in dataset.rows.items()})
         .filter(limit_groups(group_limits))
         .flat_map(
             lambda key, row: {
-                f"{key}-{llm_id}": BinaryRowWithLlm(**row.model_dump(), llm_id=llm_id)
+                f"{key}-{llm_id}": _BinaryRowWithLlm(**row.model_dump(), llm_id=llm_id)
                 for llm_id in llm_ids
             }
         )
