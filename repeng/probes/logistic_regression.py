@@ -29,6 +29,15 @@ from repeng.probes.base import BaseGroupedProbe, BaseProbe, PredictResult
 
 
 @dataclass
+class LrConfig:
+    c: float = 1.0
+    # We go for newton-cg as we've found it to be the fastest, see
+    # experiments/scratch/lr_speed.py.
+    solver: str = "newton-cg"
+    max_iter: int = 10_000
+
+
+@dataclass
 class LogisticRegressionProbe(BaseProbe):
     model: LogisticRegression
 
@@ -57,28 +66,30 @@ class LogisticRegressionGroupedProbe(BaseGroupedProbe, LogisticRegressionProbe):
 
 
 def train_lr_probe(
+    config: LrConfig,
     *,
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> LogisticRegressionProbe:
     model = LogisticRegression(
         fit_intercept=True,
-        # We go for newton-cg as we've found it to be the fastest, see
-        # experiments/scratch/lr_speed.py.
-        solver="newton-cg",
-        max_iter=10_000,
+        solver=config.solver,
+        C=config.c,
+        max_iter=config.max_iter,
     )
     model.fit(activations, labels)
     return LogisticRegressionProbe(model)
 
 
 def train_grouped_lr_probe(
+    config: LrConfig,
     *,
     activations: Float[np.ndarray, "n d"],  # noqa: F722
     groups: Int64[np.ndarray, "n d"],  # noqa: F722
     labels: Bool[np.ndarray, "n"],  # noqa: F821
 ) -> LogisticRegressionGroupedProbe:
     probe = train_lr_probe(
+        config,
         activations=_center_pairs(activations, groups),
         labels=labels,
     )

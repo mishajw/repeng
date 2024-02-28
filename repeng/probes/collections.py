@@ -6,7 +6,11 @@ from repeng.probes.contrast_consistent_search import CcsTrainingConfig, train_cc
 from repeng.probes.difference_in_means import train_dim_probe
 from repeng.probes.linear_artificial_tomography import train_lat_probe
 from repeng.probes.linear_discriminant_analysis import train_lda_probe
-from repeng.probes.logistic_regression import train_grouped_lr_probe, train_lr_probe
+from repeng.probes.logistic_regression import (
+    LrConfig,
+    train_grouped_lr_probe,
+    train_lr_probe,
+)
 from repeng.probes.principal_component_analysis import (
     train_grouped_pca_probe,
     train_pca_probe,
@@ -62,6 +66,7 @@ def train_probe(
         )
     elif probe_method == "lr":
         return train_lr_probe(
+            LrConfig(),
             activations=arrays.activations,
             labels=arrays.labels,
         )
@@ -69,6 +74,7 @@ def train_probe(
         if arrays.groups is None:
             return None
         return train_grouped_lr_probe(
+            LrConfig(),
             activations=arrays.activations,
             groups=arrays.groups,
             labels=arrays.labels,
